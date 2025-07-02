@@ -4,18 +4,20 @@ FastAPI MCP Client - Clean Architecture Implementation
 Real MCP Context7 integration without mocks
 """
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
-from typing import Dict, Any
+from typing import Dict, Any, AsyncGenerator
 import uvicorn
+import json
+import asyncio
 
-from mcp_service import mcp_service, deepwiki_service
+from tools import AVAILABLE_TOOLS, get_all_tool_schemas
 
 # App configuration
 app = FastAPI(
-    title="FastAPI MCP Client", 
-    version="2.0.0",
-    description="Real MCP Context7 and DeepWiki integration"
+    title="FastAPI MCP Tool Server", 
+    version="1.0.0",
+    description="Proof-of-concept MCP server with mocked tools and SSE"
 )
 
 app.add_middleware(
