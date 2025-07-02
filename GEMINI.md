@@ -1,15 +1,13 @@
-# Gemini/Claude Development Guide
+# MCP Tool Server Development Guide
 
-This file provides guidance for AI assistants working with this repository.
+This file provides guidance for AI assistants working with this MCP tool server repository.
 
 ## Development Commands
 
 ### Server Management
 ```bash
-# Start the server with mocked services (default)
+# Start the MCP server with mock tools
 source venv/bin/activate && python main.py
-
-# To use live services, edit main.py and set USE_MOCKS = False
 ```
 
 ### Testing
@@ -28,33 +26,52 @@ python client.py
 
 ### Core Components
 
-- **`main.py`**: A single-file FastAPI application that provides SSE streams and a generic MCP client for external AI services.
-- **`client.py`**: A command-line client for testing SSE streams and MCP endpoints.
-- **`test_sse.py`**: The test suite for the application.
+- **`main.py`**: FastAPI application with MCP server, tool execution, and SSE streaming.
+- **`tools.py`**: Mock tools following LangGraph/LangChain pattern with BaseTool class.
+- **`mcp_server.py`**: MCP server implementation for tool management and execution.
+- **`client.py`**: Command-line client for testing SSE streams and tool endpoints.
+- **`test_sse.py`**: Test suite for the application.
 
 ### Key Architectural Patterns
 
-- **Generic MCP Client**: The `MCPClient` class in `main.py` provides a reusable client for any MCP-compliant service. It handles session initialization and method calls.
-- **Mocked Services**: The `MockedMCPClient` class simulates the behavior of the live services, allowing for local development and testing without relying on external dependencies. The `USE_MOCKS` flag in `main.py` controls whether to use the mocked or live services.
-- **SSE Streams**: The application uses `StreamingResponse` to provide real-time event streams for general updates and system metrics.
+- **LangGraph/LangChain Tool Pattern**: Tools inherit from `BaseTool` class with schema definition and validation.
+- **Mock Tools**: All tools are mocked for laboratory/testing purposes without external dependencies.
+- **MCP Server**: Manages tool registry, execution history, and streaming capabilities.
+- **SSE Streams**: Real-time event streams for tool execution and system metrics.
+
+### Available Mock Tools
+
+1. **`analyze_repository`**: Analyze GitHub repositories
+2. **`resolve_library`**: Resolve library names to IDs
+3. **`get_documentation`**: Retrieve library documentation
+4. **`web_search`**: Mock web search functionality
 
 ### Endpoints Structure
 
 - **SSE Streams**:
-  - `/stream`: Main event stream.
-  - `/metrics`: System metrics stream.
-- **MCP Endpoints**:
-  - `/mcp/deepwiki/tools`: List DeepWiki tools.
-  - `/mcp/deepwiki/analyze`: Analyze a repository.
-  - `/mcp/context7/tools`: List Context7 tools.
-  - `/mcp/context7/docs`: Get library documentation.
+  - `/stream`: Main event stream
+  - `/metrics`: System metrics stream
+- **MCP Tool Endpoints**:
+  - `/mcp/tools`: List all available tools
+  - `/mcp/tools/{tool_name}/schema`: Get tool schema
+  - `/mcp/tools/{tool_name}/execute`: Execute a tool
+  - `/mcp/tools/{tool_name}/execute-stream`: Execute tool with SSE streaming
 - **Health Check**:
-  - `/health`: Check the server status.
+  - `/health`: Server status and statistics
 
 ## Development Environment Setup
 
-The server runs on `http://127.0.0.1:8000`. By default, it uses mocked MCP services. To connect to the live services, you must modify the `USE_MOCKS` variable in `main.py`.
+The server runs on `http://127.0.0.1:8000` with a web interface for testing tools and streaming. All tools are mocked for lab/testing purposes.
 
 ## Testing Strategy
 
-The test suite (`test_sse.py`) is designed to run against the server with mocked services enabled. This ensures that the tests are reliable and independent of external factors.
+The test suite is designed to work with the mock tools, ensuring reliable testing without external dependencies.
+
+# Important Instructions
+
+- This is a laboratory/testing MCP server with mock tools only
+- All tools are fictional and for demonstration purposes
+- Do what has been asked; nothing more, nothing less
+- NEVER create files unless absolutely necessary
+- ALWAYS prefer editing existing files
+- NEVER proactively create documentation files unless explicitly requested

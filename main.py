@@ -135,7 +135,7 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="header">
             <h1>🛠️ MCP Tool Server</h1>
-            <p>LangGraph/LangChain Pattern POC with SSE Streaming</p>
+            <p>LangGraph/LangChain Pattern POC with Mock Tools & SSE Streaming</p>
         </div>
         
         <div class="section">
@@ -392,7 +392,8 @@ def health_check():
     return {
         "status": "healthy",
         "server": "FastAPI MCP Tool Server",
-        "version": "2.0.0",
+        "version": "2.0.0", 
+        "description": "Mock MCP Server for Lab/Testing",
         "tools_available": len(AVAILABLE_TOOLS),
         "timestamp": datetime.now().isoformat()
     }
@@ -535,7 +536,7 @@ async def execute_mcp_tool_stream(tool_name: str, request_data: Dict[str, Any]):
 if __name__ == "__main__":
     print("🛠️  FastAPI MCP Tool Server v2.0 starting...")
     print("📡 SSE Streaming enabled")
-    print("🔧 LangGraph/LangChain tool pattern")
+    print("🔧 LangGraph/LangChain tool pattern with mock tools")
     print("🌐 Interface: http://127.0.0.1:8000")
     print("❤️  Health: http://127.0.0.1:8000/health")
     

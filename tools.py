@@ -75,16 +75,16 @@ class BaseTool(ABC):
         
         return validated
 
-class DeepWikiAnalyzeTool(BaseTool):
-    """DeepWiki repository analysis tool"""
+class RepositoryAnalyzerTool(BaseTool):
+    """Repository analysis tool"""
     
     @property
     def name(self) -> str:
-        return "deepwiki_analyze"
+        return "analyze_repository"
     
     @property
     def description(self) -> str:
-        return "Analyze a GitHub repository using DeepWiki AI insights"
+        return "Analyze a GitHub repository and extract insights"
     
     @property
     def parameters(self) -> List[ToolParameter]:
@@ -178,16 +178,16 @@ class DeepWikiAnalyzeTool(BaseTool):
         
         return result
 
-class Context7ResolveTool(BaseTool):
-    """Context7 library ID resolution tool"""
+class LibraryResolverTool(BaseTool):
+    """Library ID resolution tool"""
     
     @property
     def name(self) -> str:
-        return "context7_resolve"
+        return "resolve_library"
     
     @property
     def description(self) -> str:
-        return "Resolve library name to Context7-compatible library ID"
+        return "Resolve library name to compatible library ID"
     
     @property
     def parameters(self) -> List[ToolParameter]:
@@ -261,16 +261,16 @@ class Context7ResolveTool(BaseTool):
         
         return result
 
-class Context7DocsTool(BaseTool):
-    """Context7 library documentation retrieval tool"""
+class DocumentationTool(BaseTool):
+    """Library documentation retrieval tool"""
     
     @property
     def name(self) -> str:
-        return "context7_docs"
+        return "get_documentation"
     
     @property
     def description(self) -> str:
-        return "Retrieve documentation for a Context7 library ID"
+        return "Retrieve documentation for a library ID"
     
     @property
     def parameters(self) -> List[ToolParameter]:
@@ -278,7 +278,7 @@ class Context7DocsTool(BaseTool):
             ToolParameter(
                 name="library_id",
                 param_type="str",
-                description="Context7-compatible library ID (e.g., '/vercel/next.js')",
+                description="Library ID (e.g., '/vercel/next.js')",
                 required=True
             ),
             ToolParameter(
@@ -426,9 +426,9 @@ class WebSearchTool(BaseTool):
 
 # Tool Registry
 TOOL_INSTANCES = [
-    DeepWikiAnalyzeTool(),
-    Context7ResolveTool(), 
-    Context7DocsTool(),
+    RepositoryAnalyzerTool(),
+    LibraryResolverTool(), 
+    DocumentationTool(),
     WebSearchTool()
 ]
 
@@ -477,7 +477,7 @@ def list_available_tools() -> List[str]:
 # Utility functions for compatibility
 def get_library_docs(library_id: str, tokens: int = 5000, topic: str = "") -> Dict[str, Any]:
     """Legacy compatibility function"""
-    return execute_tool("context7_docs", {
+    return execute_tool("get_documentation", {
         "library_id": library_id,
         "tokens": tokens, 
         "topic": topic
@@ -485,12 +485,12 @@ def get_library_docs(library_id: str, tokens: int = 5000, topic: str = "") -> Di
 
 def resolve_library_id(library_name: str) -> Dict[str, Any]:
     """Legacy compatibility function"""
-    return execute_tool("context7_resolve", {
+    return execute_tool("resolve_library", {
         "library_name": library_name
     })
 
 def analyze_repository(repository: str) -> Dict[str, Any]:
     """Legacy compatibility function"""
-    return execute_tool("deepwiki_analyze", {
+    return execute_tool("analyze_repository", {
         "repository": repository
     })
