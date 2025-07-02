@@ -6,8 +6,10 @@ import json
 import asyncio
 import datetime
 import random
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Dict, Any
 import uvicorn
+import httpx
+import uuid
 
 app = FastAPI(
     title="FastAPI SSE Server", 
@@ -171,6 +173,13 @@ HTML_TEMPLATE = """
             </div>
             
             <div class="control-group">
+                <h4>🔍 DeepWiki</h4>
+                <input type="text" id="repoInput" placeholder="org/repo (e.g., microsoft/vscode)" style="width:100%; padding:8px; margin:5px 0; border:1px solid #ddd; border-radius:4px;">
+                <button class="btn-connect" onclick="analyzeRepo()">Analyze Repo</button>
+                <button class="btn-connect" onclick="listTools()">List Tools</button>
+            </div>
+            
+            <div class="control-group">
                 <h4>🎛️ Controls</h4>
                 <button class="btn-connect" onclick="connectAll()">Connect All</button>
                 <button class="btn-disconnect" onclick="disconnectAll()">Disconnect All</button>
@@ -215,7 +224,8 @@ HTML_TEMPLATE = """
             const timestamp = new Date().toLocaleTimeString();
             const icons = {
                 stream: '📡', metrics: '📊', heartbeat: '💓', 
-                notification: '🔔', sensor: '🌡️', error: '❌'
+                notification: '🔔', sensor: '🌡️', error: '❌',
+                deepwiki: '🔍', tools: '🛠️', analysis: '📋', complete: '✅', info: 'ℹ️'
             };
             
             let displayData;
@@ -290,6 +300,47 @@ HTML_TEMPLATE = """
             updateStats();
         }
         
+        // DeepWiki functions
+        async function listTools() {
+            try {
+                const response = await fetch('/deepwiki/tools');
+                const result = await response.json();
+                addEvent('deepwiki', 'tools', JSON.stringify(result.data, null, 2));
+            } catch (error) {
+                addEvent('deepwiki', 'error', `Error listing tools: ${error.message}`);
+            }
+        }
+        
+        async function analyzeRepo() {
+            const repository = document.getElementById('repoInput').value.trim();
+            if (!repository) {
+                addEvent('deepwiki', 'error', 'Please enter a repository name (e.g., microsoft/vscode)');
+                return;
+            }
+            
+            // Start streaming analysis
+            const eventSource = new EventSource(`/deepwiki/stream/${encodeURIComponent(repository)}`);
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'analysis') {
+                    addEvent('deepwiki', 'analysis', JSON.stringify(data.data, null, 2));
+                } else if (data.type === 'error') {
+                    addEvent('deepwiki', 'error', data.message);
+                } else if (data.type === 'complete') {
+                    addEvent('deepwiki', 'complete', data.message);
+                    eventSource.close();
+                } else {
+                    addEvent('deepwiki', 'info', data.message || JSON.stringify(data));
+                }
+            };
+            
+            eventSource.onerror = () => {
+                addEvent('deepwiki', 'error', 'Connection error');
+                eventSource.close();
+            };
+        }
+        
         // Cleanup
         window.addEventListener('beforeunload', disconnectAll);
         updateStats();
@@ -297,6 +348,100 @@ HTML_TEMPLATE = """
 </body>
 </html>
 """
+
+# ==================== DeepWiki MCP CLIENT ====================
+
+class DeepWikiMCPClient:
+    def __init__(self):
+        self.base_url = "https://mcp.deepwiki.com/mcp"
+        self.session_id = None
+        self.client = httpx.AsyncClient()
+        
+    async def initialize_session(self) -> bool:
+        """Initialize MCP session with DeepWiki"""
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {"tools": {}},
+                "clientInfo": {"name": "fastapi-client", "version": "1.0.0"}
+            }
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream"
+        }
+        
+        try:
+            response = await self.client.post(self.base_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                # Extract session ID from headers
+                self.session_id = response.headers.get("mcp-session-id")
+                return True
+        except Exception as e:
+            print(f"Error initializing MCP session: {e}")
+        return False
+    
+    async def list_tools(self) -> Dict[str, Any]:
+        """List available tools from DeepWiki MCP"""
+        if not self.session_id:
+            await self.initialize_session()
+            
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 2,
+            "method": "tools/list",
+            "params": {}
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": self.session_id
+        }
+        
+        try:
+            response = await self.client.post(self.base_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error listing tools: {e}")
+        return {"error": "Failed to list tools"}
+    
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        """Call a specific tool via DeepWiki MCP"""
+        if not self.session_id:
+            await self.initialize_session()
+            
+        payload = {
+            "jsonrpc": "2.0",
+            "id": str(uuid.uuid4()),
+            "method": "tools/call",
+            "params": {
+                "name": tool_name,
+                "arguments": arguments
+            }
+        }
+        
+        headers = {
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": self.session_id
+        }
+        
+        try:
+            response = await self.client.post(self.base_url, json=payload, headers=headers)
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error calling tool {tool_name}: {e}")
+        return {"error": f"Failed to call tool {tool_name}"}
+
+# Global MCP client instance
+deepwiki_client = DeepWikiMCPClient()
 
 # ==================== ENDPOINTS ====================
 
@@ -501,22 +646,118 @@ async def broadcast_message(message: dict):
         'timestamp': datetime.datetime.now().isoformat()
     }
 
+# ==================== DeepWiki MCP ENDPOINTS ====================
+
+@app.get("/deepwiki/tools")
+async def list_deepwiki_tools():
+    """List available DeepWiki MCP tools"""
+    result = await deepwiki_client.list_tools()
+    return {
+        'status': 'success',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'data': result
+    }
+
+@app.post("/deepwiki/search")
+async def search_repository(request_data: dict):
+    """Search in a GitHub repository using DeepWiki"""
+    repository = request_data.get('repository', '')
+    query = request_data.get('query', '')
+    
+    if not repository or not query:
+        return {
+            'status': 'error',
+            'message': 'Repository and query are required',
+            'timestamp': datetime.datetime.now().isoformat()
+        }
+    
+    arguments = {
+        'repository': repository,
+        'query': query
+    }
+    
+    result = await deepwiki_client.call_tool('search', arguments)
+    return {
+        'status': 'success',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'data': result
+    }
+
+@app.post("/deepwiki/analyze")
+async def analyze_repository(request_data: dict):
+    """Analyze a GitHub repository using DeepWiki"""
+    repository = request_data.get('repository', '')
+    focus = request_data.get('focus', 'general')
+    
+    if not repository:
+        return {
+            'status': 'error',
+            'message': 'Repository is required',
+            'timestamp': datetime.datetime.now().isoformat()
+        }
+    
+    arguments = {
+        'repository': repository,
+        'focus': focus
+    }
+    
+    result = await deepwiki_client.call_tool('analyze', arguments)
+    return {
+        'status': 'success',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'data': result
+    }
+
+@app.get("/deepwiki/stream/{repository}")
+async def stream_deepwiki_analysis(repository: str, request: Request):
+    """Stream DeepWiki analysis results via SSE"""
+    
+    async def deepwiki_generator() -> AsyncGenerator[str, None]:
+        yield f"data: {json.dumps({'message': f'Starting analysis for {repository}'})}\n\n"
+        
+        try:
+            # Get repository analysis
+            result = await deepwiki_client.call_tool('analyze', {'repository': repository})
+            
+            if 'error' not in result:
+                yield f"data: {json.dumps({'type': 'analysis', 'data': result})}\n\n"
+            else:
+                yield f"data: {json.dumps({'type': 'error', 'message': result.get('error', 'Unknown error')})}\n\n"
+                
+        except Exception as e:
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        
+        # Final completion event
+        yield f"data: {json.dumps({'type': 'complete', 'message': 'Analysis completed'})}\n\n"
+    
+    return StreamingResponse(
+        deepwiki_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*"
+        }
+    )
+
 @app.get("/health")
 async def health_check():
     """Health check endpoint"""
     return {
         'status': 'healthy',
         'timestamp': datetime.datetime.now().isoformat(),
-        'server': 'FastAPI SSE Server',
+        'server': 'FastAPI SSE Server with DeepWiki MCP',
         'version': '1.0.0'
     }
 
 if __name__ == "__main__":
-    print("🚀 FastAPI SSE Server starting...")
+    print("🚀 FastAPI SSE Server with DeepWiki MCP starting...")
     print("📱 Interface: http://127.0.0.1:8000")
     print("📡 Stream: http://127.0.0.1:8000/stream")
     print("📊 Metrics: http://127.0.0.1:8000/metrics")
     print("🔗 Channel: http://127.0.0.1:8000/realtime/{channel}")
+    print("🔍 DeepWiki Tools: http://127.0.0.1:8000/deepwiki/tools")
+    print("🔍 DeepWiki Stream: http://127.0.0.1:8000/deepwiki/stream/{repository}")
     print("❤️  Health: http://127.0.0.1:8000/health")
     
     uvicorn.run(

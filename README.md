@@ -1,27 +1,44 @@
-# 🚀 FastAPI Server-Sent Events (SSE) Tutorial
+# 🚀 FastAPI Server-Sent Events (SSE) + DeepWiki MCP Tutorial
 
-This project demonstrates a complete implementation of **Server-Sent Events** using FastAPI, including a server, Python client, and web interface.
+This project demonstrates a complete implementation of **Server-Sent Events** using FastAPI with **DeepWiki MCP integration**, including a server, Python client, and web interface for GitHub repository analysis.
 
 ## 📋 Features
 
 - ✅ **FastAPI Server** with multiple SSE endpoints
+- ✅ **DeepWiki MCP Integration** for GitHub repository analysis
 - ✅ **Modern and interactive Web Interface**
 - ✅ **Python Client** for consuming streams
 - ✅ **Multiple event types**: heartbeat, notifications, metrics, sensors
 - ✅ **Support for custom channels**
 - ✅ **Broadcast API**
+- ✅ **Real-time GitHub repository analysis**
 - ✅ **Automated tests**
 
 ## ⚙️ Environment Setup
 
-### 1. Install Dependencies
+### 1. Running with Docker (Recommended)
 
+This project is equipped with a `Dockerfile` for easy containerization.
+
+**Build the Docker image:**
+```bash
+docker build -t fastapi-sse-app .
+```
+
+**Run the Docker container:**
+```bash
+docker run -d -p 8000:8000 --name sse-app fastapi-sse-app
+```
+The application will be accessible at `http://localhost:8000`.
+
+### 2. Manual Setup
+
+#### Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Run the Server
-
+#### Run the Server
 ```bash
 python main.py
 ```
@@ -32,6 +49,8 @@ The server will start at `http://127.0.0.1:8000` with the following endpoints:
 - 📡 **Main Stream**: `http://127.0.0.1:8000/stream`
 - 📊 **Metrics**: `http://127.0.0.1:8000/metrics`
 - 🔗 **Custom Channel**: `http://127.0.0.1:8000/realtime/{channel-name}`
+- 🔍 **DeepWiki Tools**: `http://127.0.0.1:8000/deepwiki/tools`
+- 🔍 **DeepWiki Stream**: `http://127.0.0.1:8000/deepwiki/stream/{repository}`
 - ❤️ **Health Check**: `http://127.0.0.1:8000/health`
 
 ## 🌐 Web Interface
@@ -42,6 +61,8 @@ Access `http://127.0.0.1:8000` to see the full web interface with:
 - **Real-time statistics**
 - **Modern and responsive interface**
 - **Interactive controls** to connect/disconnect streams
+- **DeepWiki repository analysis** with real-time results
+- **GitHub repository search and analysis tools**
 
 ## 🐍 Python Client
 
@@ -110,6 +131,34 @@ API to send broadcast messages:
 ### ❤️ GET `/health`
 Server health check.
 
+## 🔍 DeepWiki MCP Integration
+
+### 🛠️ GET `/deepwiki/tools`
+Lists available DeepWiki MCP tools.
+
+### 🔍 POST `/deepwiki/search`
+Search in GitHub repositories using DeepWiki:
+```json
+{
+  "repository": "microsoft/vscode",
+  "query": "extension development"
+}
+```
+
+### 📋 POST `/deepwiki/analyze`
+Analyze GitHub repositories:
+```json
+{
+  "repository": "microsoft/vscode",
+  "focus": "general"
+}
+```
+
+### 📡 GET `/deepwiki/stream/{repository}`
+Real-time streaming analysis of GitHub repositories via SSE.
+
+**Example:** `http://127.0.0.1:8000/deepwiki/stream/microsoft/vscode`
+
 ## 🛠️ Consuming with Tools
 
 ### 📮 Postman
@@ -140,6 +189,17 @@ curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/stream
 # Metrics
 curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/metrics
 
+# DeepWiki tools
+curl http://127.0.0.1:8000/deepwiki/tools
+
+# DeepWiki search
+curl -X POST http://127.0.0.1:8000/deepwiki/search \
+  -H "Content-Type: application/json" \
+  -d '{"repository": "microsoft/vscode", "query": "extension development"}'
+
+# DeepWiki streaming analysis
+curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/deepwiki/stream/microsoft/vscode
+
 # Health check
 curl http://127.0.0.1:8000/health
 ```
@@ -160,6 +220,9 @@ fastapi-sse-tutorial/
 - **FastAPI**: Modern web framework
 - **Uvicorn**: ASGI server
 - **Requests**: HTTP client for tests
+- **HTTPx**: Async HTTP client for MCP communication
+- **UUID**: Unique identifier generation for MCP requests
+- **SSEClient-py**: Server-Sent Events client
 
 ## 🎯 Use Cases
 
@@ -170,6 +233,9 @@ This project demonstrates how to implement:
 - 📈 **System monitoring**
 - 🌡️ **IoT sensor data**
 - 💬 **Activity feeds**
+- 🔍 **GitHub repository analysis**
+- 🤖 **MCP (Model Context Protocol) integration**
+- 📋 **AI-powered documentation analysis**
 
 ## 🔄 Event Flow
 
@@ -189,6 +255,9 @@ This project demonstrates how to implement:
 - **`notification`**: Alerts and notifications
 - **`sensor`**: Simulated sensor data
 - **`error`**: Error messages
+- **`deepwiki`**: DeepWiki MCP events
+- **`analysis`**: Repository analysis results
+- **`tools`**: Available MCP tools information
 
 ## 🚦 Server Status
 
@@ -232,12 +301,18 @@ To expand this project:
 3. 🔄 **Set up Redis for distributed pub/sub**
 4. 🐳 **Containerize with Docker**
 5. ☁️ **Deploy to the cloud**
+6. 🔍 **Add more MCP servers integration**
+7. 📋 **Implement repository caching**
+8. 🤖 **Add AI-powered code analysis**
 
 ## 📚 Useful Resources
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Server-Sent Events MDN](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
 - [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
+- [DeepWiki MCP](https://deepwiki.com/)
+- [Model Context Protocol](https://spec.modelcontextprotocol.io/)
+- [HTTPx Documentation](https://www.python-httpx.org/)
 
 ---
 
