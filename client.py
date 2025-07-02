@@ -119,7 +119,7 @@ def test_health():
 
 def main():
     """Client demonstration"""
-    print("🚀 FastAPI SSE Client")
+    print("🚀 FastAPI MCP Client")
     print("=" * 40)
     
     # Test connection first
@@ -128,31 +128,31 @@ def main():
         print("   python main.py")
         return
     
-    print("1. Main Stream (/stream)")
-    print("2. Metrics (/metrics)")
-    print("3. Custom Channel (/realtime/demo)")
-    print("4. Broadcast Test")
+    print("1. DeepWiki - List Tools")
+    print("2. DeepWiki - Analyze Repo")
+    print("3. Context7 - List Tools")
+    print("4. Context7 - Get Library Docs")
     print("5. Exit")
     print("=" * 40)
-    
-    client = FastAPISSEClient()
     
     while True:
         try:
             choice = input("\nChoose an option (1-5): ").strip()
             
             if choice == '1':
-                print("Connecting to the main stream...")
-                client.connect('/stream')
+                print("Listing DeepWiki tools...")
+                test_mcp_service('deepwiki', 'tools', {})
             elif choice == '2':
-                print("Connecting to metrics...")
-                client.connect('/metrics')
+                repo = input("Enter repository (e.g., microsoft/vscode): ")
+                if repo:
+                    test_mcp_service('deepwiki', 'analyze', {'repository': repo})
             elif choice == '3':
-                print("Connecting to the demo channel...")
-                client.connect('/realtime/demo')
+                print("Listing Context7 tools...")
+                test_mcp_service('context7', 'tools', {})
             elif choice == '4':
-                print("Sending broadcast...")
-                test_broadcast()
+                lib = input("Enter library (e.g., /vercel/next.js): ")
+                if lib:
+                    test_mcp_service('context7', 'docs', {'library': lib})
             elif choice == '5':
                 print("👋 Exiting...")
                 break
@@ -161,25 +161,22 @@ def main():
                 
         except KeyboardInterrupt:
             print("\n🛑 Interrupted by user")
-            client.stop()
             break
         except EOFError:
             print("\n👋 Exiting...")
             break
 
-def test_broadcast():
-    """Tests the broadcast endpoint"""
+def test_mcp_service(service: str, endpoint: str, payload: dict):
+    """Tests a generic MCP service endpoint."""
     try:
-        data = {
-            "message": "Broadcast test from Python client",
-            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
-        }
-        response = requests.post("http://127.0.0.1:8000/api/broadcast", json=data, timeout=5)
+        url = f"http://127.0.0.1:8000/mcp/{service}/{endpoint}"
+        response = requests.post(url, json=payload, timeout=30)
         response.raise_for_status()
         result = response.json()
-        print(f"✅ Broadcast sent: {result['status']}")
+        print(f"✅ {service.capitalize()} response:")
+        print(json.dumps(result, indent=2))
     except Exception as e:
-        print(f"❌ Error in broadcast: {e}")
+        print(f"❌ Error calling {service} service: {e}")
 
 if __name__ == "__main__":
     # Handler for system signals

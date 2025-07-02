@@ -19,75 +19,25 @@ def test_health_endpoint():
         print(f"❌ Health check failed: {e}")
         return False
 
-def test_sync_sse_endpoint(url: str, duration: int = 10):
-    """Tests an SSE endpoint synchronously"""
-    print(f"🧪 Testing {url} for {duration} seconds...")
-    
-    try:
-        response = requests.get(
-            url,
-            stream=True,
-            headers={
-                'Accept': 'text/event-stream',
-                'Cache-Control': 'no-cache'
-            },
-            timeout=30
-        )
-        response.raise_for_status()
-        
-        print(f"✅ Status: {response.status_code}")
-        print(f"📋 Content-Type: {response.headers.get('content-type', 'N/A')}")
-        
-        start_time = time.time()
-        event_count = 0
-        
-        for line in response.iter_lines(decode_unicode=True):
-            if time.time() - start_time > duration:
-                break
-                
-            if line and line.startswith('data: '):
-                event_count += 1
-                try:
-                    data = json.loads(line[6:])  # Remove 'data: '
-                    timestamp = datetime.now().strftime("%H:%M:%S")
-                    message = data.get('message', 'N/A')
-                    print(f"[{timestamp}] 📡 Event #{event_count}: {message}")
-                except json.JSONDecodeError:
-                    print(f"📄 Raw data: {line}")
-        
-        print(f"🏁 Test finished. Total events: {event_count}")
-        return event_count > 0
-        
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return False
 
-def test_broadcast_api():
-    """Tests the broadcast endpoint"""
-    print("🧪 Testing broadcast API...")
-    
+
+def test_mcp_endpoint(service: str, tool: str, payload: dict):
+    """Tests a generic MCP endpoint."""
+    print(f"🧪 Testing MCP endpoint: {service}/{tool}...")
+    url = f"http://127.0.0.1:8000/mcp/{service}/{tool}"
     try:
-        data = {
-            "message": "Broadcast test from the test script",
-            "timestamp": datetime.now().isoformat(),
-            "sender": "test_script"
-        }
-        response = requests.post(
-            "http://127.0.0.1:8000/api/broadcast",
-            json=data,
-            timeout=5
-        )
+        response = requests.post(url, json=payload, timeout=10)
         response.raise_for_status()
-        result = response.json()
-        print(f"✅ Broadcast sent: {result['status']}")
+        data = response.json()
+        print(f"✅ {service.capitalize()} {tool.capitalize()} successful: {data.get('status')}")
         return True
     except Exception as e:
-        print(f"❌ Error in broadcast: {e}")
+        print(f"❌ {service.capitalize()} {tool.capitalize()} failed: {e}")
         return False
 
 def test_all_endpoints():
     """Runs all tests in sequence"""
-    print("🚀 Starting FastAPI SSE test suite")
+    print("🚀 Starting FastAPI MCP test suite")
     print("=" * 50)
     
     # Health check test
@@ -97,46 +47,38 @@ def test_all_endpoints():
     
     print("\n" + "-" * 50)
     
-    # Main stream test
-    stream_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/stream", 5)
-    
+    # DeepWiki tests
+    deepwiki_tools_ok = test_mcp_endpoint("deepwiki", "tools", {})
+    deepwiki_analyze_ok = test_mcp_endpoint("deepwiki", "analyze", {"repository": "test/repo"})
+
     print("\n" + "-" * 50)
-    
-    # Metrics stream test
-    metrics_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/metrics", 5)
-    
-    print("\n" + "-" * 50)
-    
-    # Custom channel test
-    channel_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/realtime/test", 5)
-    
-    print("\n" + "-" * 50)
-    
-    # Broadcast API test
-    broadcast_ok = test_broadcast_api()
+
+    # Context7 tests
+    context7_tools_ok = test_mcp_endpoint("context7", "tools", {})
+    context7_docs_ok = test_mcp_endpoint("context7", "docs", {"library": "/test/library"})
     
     print("\n" + "=" * 50)
     print("📊 TEST SUMMARY:")
     print(f"   Health Check: {'✅' if True else '❌'}")
-    print(f"   Main Stream: {'✅' if stream_ok else '❌'}")
-    print(f"   Metrics: {'✅' if metrics_ok else '❌'}")
-    print(f"   Custom Channel: {'✅' if channel_ok else '❌'}")
-    print(f"   Broadcast API: {'✅' if broadcast_ok else '❌'}")
+    print(f"   DeepWiki Tools: {'✅' if deepwiki_tools_ok else '❌'}")
+    print(f"   DeepWiki Analyze: {'✅' if deepwiki_analyze_ok else '❌'}")
+    print(f"   Context7 Tools: {'✅' if context7_tools_ok else '❌'}")
+    print(f"   Context7 Docs: {'✅' if context7_docs_ok else '❌'}")
     
-    all_ok = stream_ok and metrics_ok and channel_ok and broadcast_ok
+    all_ok = deepwiki_tools_ok and deepwiki_analyze_ok and context7_tools_ok and context7_docs_ok
     print(f"\n🎯 Overall Status: {'✅ ALL TESTS PASSED' if all_ok else '❌ SOME TESTS FAILED'}")
     
     return all_ok
 
 def interactive_test():
     """Interactive test to choose specific endpoints"""
-    print("🚀 FastAPI SSE - Interactive Test")
+    print("🚀 FastAPI MCP - Interactive Test")
     print("=" * 40)
     print("1. Health Check")
-    print("2. Main Stream (/stream)")
-    print("3. Metrics (/metrics)")
-    print("4. Custom Channel (/realtime/test)")
-    print("5. Broadcast API")
+    print("2. DeepWiki - List Tools")
+    print("3. DeepWiki - Analyze Repo")
+    print("4. Context7 - List Tools")
+    print("5. Context7 - Get Library Docs")
     print("6. Run All Tests")
     print("7. Exit")
     print("=" * 40)
@@ -148,13 +90,13 @@ def interactive_test():
             if choice == '1':
                 test_health_endpoint()
             elif choice == '2':
-                test_sync_sse_endpoint("http://127.0.0.1:8000/stream", 10)
+                test_mcp_endpoint("deepwiki", "tools", {})
             elif choice == '3':
-                test_sync_sse_endpoint("http://127.0.0.1:8000/metrics", 10)
+                test_mcp_endpoint("deepwiki", "analyze", {"repository": "test/repo"})
             elif choice == '4':
-                test_sync_sse_endpoint("http://127.0.0.1:8000/realtime/test", 10)
+                test_mcp_endpoint("context7", "tools", {})
             elif choice == '5':
-                test_broadcast_api()
+                test_mcp_endpoint("context7", "docs", {"library": "/test/library"})
             elif choice == '6':
                 test_all_endpoints()
             elif choice == '7':

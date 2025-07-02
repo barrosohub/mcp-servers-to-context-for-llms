@@ -110,6 +110,8 @@ HTML_TEMPLATE = """
         .event.notification { border-left-color: #ffc107; }
         .event.sensor { border-left-color: #17a2b8; }
         .event.metrics { border-left-color: #fd7e14; }
+        .event.deepwiki { border-left-color: #8a2be2; }
+        .event.context7 { border-left-color: #ff69b4; }
         .event-header { 
             display: flex; 
             justify-content: space-between; 
@@ -138,52 +140,28 @@ HTML_TEMPLATE = """
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 FastAPI Server-Sent Events</h1>
-            <p>Complete real-time SSE demonstration</p>
-        </div>
-        
-        <div class="stats">
-            <div class="stat-card">
-                <div class="stat-value" id="totalEvents">0</div>
-                <div>Total</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="streamEvents">0</div>
-                <div>Stream</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value" id="metricsEvents">0</div>
-                <div>Metrics</div>
-            </div>
+            <h1>🚀 FastAPI MCP Client</h1>
+            <p>A demonstration of DeepWiki and Context7 integration</p>
         </div>
         
         <div class="controls">
             <div class="control-group">
-                <h4>📡 Main Stream</h4>
-                <div class="status disconnected" id="streamStatus">Disconnected</div>
-                <button class="btn-connect" onclick="connectStream()">Connect</button>
-                <button class="btn-disconnect" onclick="disconnectStream()">Disconnect</button>
-            </div>
-            
-            <div class="control-group">
-                <h4>📊 Metrics Stream</h4>
-                <div class="status disconnected" id="metricsStatus">Disconnected</div>
-                <button class="btn-connect" onclick="connectMetrics()">Connect</button>
-                <button class="btn-disconnect" onclick="disconnectMetrics()">Disconnect</button>
-            </div>
-            
-            <div class="control-group">
                 <h4>🔍 DeepWiki</h4>
                 <input type="text" id="repoInput" placeholder="org/repo (e.g., microsoft/vscode)" style="width:100%; padding:8px; margin:5px 0; border:1px solid #ddd; border-radius:4px;">
                 <button class="btn-connect" onclick="analyzeRepo()">Analyze Repo</button>
-                <button class="btn-connect" onclick="listTools()">List Tools</button>
+                <button class="btn-connect" onclick="listDeepWikiTools()">List Tools</button>
+            </div>
+
+            <div class="control-group">
+                <h4>📚 Context7</h4>
+                <input type="text" id="libraryInput" placeholder="library (e.g., /vercel/next.js)" style="width:100%; padding:8px; margin:5px 0; border:1px solid #ddd; border-radius:4px;">
+                <button class="btn-connect" onclick="getLibraryDocs()">Get Docs</button>
+                <button class="btn-connect" onclick="listContext7Tools()">List Tools</button>
             </div>
             
             <div class="control-group">
                 <h4>🎛️ Controls</h4>
-                <button class="btn-connect" onclick="connectAll()">Connect All</button>
-                <button class="btn-disconnect" onclick="disconnectAll()">Disconnect All</button>
-                <button class="btn-clear" onclick="clearEvents()">Clear</button>
+                <button class="btn-clear" onclick="clearEvents()">Clear Events</button>
             </div>
         </div>
         
@@ -193,7 +171,7 @@ HTML_TEMPLATE = """
                     <span>🚀 SYSTEM</span>
                     <span id="initialTime"></span>
                 </div>
-                <div>SSE client initiated. Connect to streams to see real-time events.</div>
+                <div>MCP client initiated. Use the controls to interact with the services.</div>
             </div>
         </div>
     </div>
@@ -202,148 +180,87 @@ HTML_TEMPLATE = """
         // Initialize timestamp
         document.getElementById('initialTime').textContent = new Date().toLocaleTimeString();
         
-        let connections = { stream: null, metrics: null };
-        let eventCounts = { total: 0, stream: 0, metrics: 0 };
-        
         const eventsContainer = document.getElementById('eventsContainer');
         
-        function updateStats() {
-            document.getElementById('totalEvents').textContent = eventCounts.total;
-            document.getElementById('streamEvents').textContent = eventCounts.stream;
-            document.getElementById('metricsEvents').textContent = eventCounts.metrics;
-        }
-        
         function addEvent(source, type, data) {
-            eventCounts.total++;
-            eventCounts[source]++;
-            updateStats();
-            
             const eventDiv = document.createElement('div');
             eventDiv.className = `event ${type}`;
             
             const timestamp = new Date().toLocaleTimeString();
             const icons = {
-                stream: '📡', metrics: '📊', heartbeat: '💓', 
-                notification: '🔔', sensor: '🌡️', error: '❌',
-                deepwiki: '🔍', tools: '🛠️', analysis: '📋', complete: '✅', info: 'ℹ️'
+                deepwiki: '🔍', context7: '📚', tools: '🛠️', 
+                analysis: '📋', docs: '📄', error: '❌'
             };
             
             let displayData;
             try {
                 const parsed = JSON.parse(data);
-                if (parsed.metrics) {
-                    displayData = `CPU: ${parsed.metrics.cpu_usage_percent}% | Memory: ${parsed.metrics.memory_usage_mb}MB | RPS: ${parsed.metrics.requests_per_second}`;
-                } else if (parsed.sensor_data) {
-                    displayData = `Temp: ${parsed.sensor_data.temperature}°C | Humidity: ${parsed.sensor_data.humidity}%`;
-                } else {
-                    displayData = parsed.message || JSON.stringify(parsed, null, 2);
-                }
+                displayData = JSON.stringify(parsed, null, 2);
             } catch {
                 displayData = data;
             }
             
             eventDiv.innerHTML = `
                 <div class="event-header">
-                    <span>${icons[type] || icons[source]} ${type.toUpperCase()}</span>
+                    <span>${icons[type] || 'ℹ️'} ${type.toUpperCase()}</span>
                     <span>${timestamp}</span>
                 </div>
-                <div>${displayData}</div>
+                <div><pre><code>${displayData}</code></pre></div>
             `;
             
             eventsContainer.insertBefore(eventDiv, eventsContainer.firstChild);
-            
-            if (eventsContainer.children.length > 50) {
-                eventsContainer.removeChild(eventsContainer.lastChild);
-            }
         }
         
-        function updateStatus(source, status) {
-            const statusElement = document.getElementById(`${source}Status`);
-            statusElement.className = `status ${status}`;
-            statusElement.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
-        }
-        
-        function connect(source, endpoint) {
-            if (connections[source]) {
-                connections[source].close();
-            }
-            
-            const eventSource = new EventSource(endpoint);
-            connections[source] = eventSource;
-            
-            eventSource.onopen = () => updateStatus(source, 'connected');
-            eventSource.onmessage = (event) => addEvent(source, source, event.data);
-            eventSource.addEventListener('heartbeat', (event) => addEvent(source, 'heartbeat', event.data));
-            eventSource.addEventListener('notification', (event) => addEvent(source, 'notification', event.data));
-            eventSource.addEventListener('sensor', (event) => addEvent(source, 'sensor', event.data));
-            eventSource.onerror = () => updateStatus(source, 'disconnected');
-        }
-        
-        function disconnect(source) {
-            if (connections[source]) {
-                connections[source].close();
-                connections[source] = null;
-                updateStatus(source, 'disconnected');
-            }
-        }
-        
-        // Specific functions
-        function connectStream() { connect('stream', '/stream'); }
-        function connectMetrics() { connect('metrics', '/metrics'); }
-        function disconnectStream() { disconnect('stream'); }
-        function disconnectMetrics() { disconnect('metrics'); }
-        function connectAll() { connectStream(); connectMetrics(); }
-        function disconnectAll() { disconnectStream(); disconnectMetrics(); }
         function clearEvents() { 
             eventsContainer.innerHTML = '<div class="event"><div class="event-header"><span>🧹 SYSTEM</span><span>' + new Date().toLocaleTimeString() + '</span></div><div>Events cleared.</div></div>'; 
-            eventCounts = { total: 0, stream: 0, metrics: 0 };
-            updateStats();
         }
         
-        // DeepWiki functions
-        async function listTools() {
+        // MCP functions
+        async function callMcpService(service, endpoint, payload, eventType) {
             try {
-                const response = await fetch('/deepwiki/tools');
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const result = await response.json();
-                addEvent('deepwiki', 'tools', JSON.stringify(result.data, null, 2));
+                if (response.ok) {
+                    addEvent(service, eventType, JSON.stringify(result.data, null, 2));
+                } else {
+                    addEvent(service, 'error', JSON.stringify(result, null, 2));
+                }
             } catch (error) {
-                addEvent('deepwiki', 'error', `Error listing tools: ${error.message}`);
+                addEvent(service, 'error', `Error calling ${service}: ${error.message}`);
             }
         }
+
+        // DeepWiki functions
+        function listDeepWikiTools() {
+            callMcpService('deepwiki', '/mcp/deepwiki/tools', {}, 'tools');
+        }
         
-        async function analyzeRepo() {
+        function analyzeRepo() {
             const repository = document.getElementById('repoInput').value.trim();
             if (!repository) {
                 addEvent('deepwiki', 'error', 'Please enter a repository name (e.g., microsoft/vscode)');
                 return;
             }
-            
-            // Start streaming analysis
-            const eventSource = new EventSource(`/deepwiki/stream/${encodeURIComponent(repository)}`);
-            
-            eventSource.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                if (data.type === 'analysis') {
-                    addEvent('deepwiki', 'analysis', JSON.stringify(data.data, null, 2));
-                } else if (data.type === 'error') {
-                    addEvent('deepwiki', 'error', data.message);
-                } else if (data.type === 'complete') {
-                    addEvent('deepwiki', 'complete', data.message);
-                    eventSource.close();
-                } else {
-                    addEvent('deepwiki', 'info', data.message || JSON.stringify(data));
-                }
-            };
-            
-            eventSource.onerror = () => {
-                addEvent('deepwiki', 'error', 'Connection error');
-                eventSource.close();
-            };
+            callMcpService('deepwiki', '/mcp/deepwiki/analyze', { repository: repository }, 'analysis');
         }
-        
-        // Cleanup
-        window.addEventListener('beforeunload', disconnectAll);
-        updateStats();
+
+        // Context7 functions
+        function listContext7Tools() {
+            callMcpService('context7', '/mcp/context7/tools', {}, 'tools');
+        }
+
+        function getLibraryDocs() {
+            const library = document.getElementById('libraryInput').value.trim();
+            if (!library) {
+                addEvent('context7', 'error', 'Please enter a library name (e.g., /vercel/next.js)');
+                return;
+            }
+            callMcpService('context7', '/mcp/context7/docs', { library: library }, 'docs');
+        }
     </script>
 </body>
 </html>
@@ -415,62 +332,17 @@ class MCPClient:
     async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         return await self.call_method("tools/call", {"name": tool_name, "arguments": arguments})
 
-# ==================== MOCKED MCP CLIENTS ====================
-
-class MockedMCPClient(MCPClient):
-    """Mocked MCP client for local development and testing."""
-    def __init__(self, base_url: str, service_name: str):
-        super().__init__(base_url, service_name)
-        self.mock_data = {
-            "tools/list": {"result": {"tools": [{"name": "mock_search"}, {"name": "mock_analyze"}]}},
-            "tools/call": {"result": {"content": "This is a mocked tool response."}}
-        }
-
-    async def initialize_session(self) -> bool:
-        self.session_id = f"mock-session-{uuid.uuid4()}"
-        print(f"Mocked MCP session initialized for {self.service_name} with session ID: {self.session_id}")
-        return True
-
-    async def call_method(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        print(f"Mocked call to {self.service_name}: method={method}, params={params}")
-        await asyncio.sleep(0.1)  # Simulate network latency
-        if method in self.mock_data:
-            return self.mock_data[method]
-        return {"error": f"Mocked method '{method}' not found."}
-
 # ==================== SERVICE CLIENTS ====================
 
 # Configure clients for DeepWiki and Context7
-USE_MOCKS = True # Set to False to use live services
+USE_MOCKS = False # Set to False to use live services
 
 if USE_MOCKS:
-    deepwiki_client = MockedMCPClient("http://localhost:8000/mock/deepwiki", "DeepWiki")
-    context7_client = MockedMCPClient("http://localhost:8000/mock/context7", "Context7")
+    deepwiki_client = MCPClient("http://localhost:8000/mock/deepwiki", "DeepWiki")
+    context7_client = MCPClient("http://localhost:8000/mock/context7", "Context7")
 else:
     deepwiki_client = MCPClient("https://mcp.deepwiki.com/mcp", "DeepWiki")
     context7_client = MCPClient("https://mcp.context7.com/mcp", "Context7")
-
-# ==================== MOCK SERVER ENDPOINTS (for USE_MOCKS=True) ====================
-
-@app.post("/mock/{service_name}")
-async def mock_mcp_endpoint(service_name: str, request: Request):
-    body = await request.json()
-    method = body.get("method")
-    print(f"Received request for mocked service: {service_name}, method: {method}")
-    
-    if service_name == "deepwiki":
-        if method == "tools/list":
-            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"tools": [{"name": "search"}, {"name": "analyze"}]}}
-        if method == "tools/call":
-            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"content": f"Mocked DeepWiki analysis for {body.get('params', {}).get('arguments', {}).get('repository', 'N/A')}"}}
-    
-    if service_name == "context7":
-        if method == "tools/list":
-            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"tools": [{"name": "get_library_docs"}]}}
-        if method == "tools/call":
-            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"content": f"Mocked Context7 docs for {body.get('params', {}).get('arguments', {}).get('library', 'N/A')}"}}
-            
-    return {"jsonrpc": "2.0", "id": body.get("id"), "error": {"code": -32601, "message": "Method not found"}}
 
 # ==================== ENDPOINTS ====================
 
@@ -479,295 +351,45 @@ async def get_home():
     """Main page with integrated SSE client"""
     return HTMLResponse(content=HTML_TEMPLATE)
 
-@app.get("/stream")
-async def stream_events(request: Request):
-    """
-    Main endpoint for Server-Sent Events
-    Generates various events: messages, heartbeat, notifications, sensors
-    """
-    
-    async def event_generator() -> AsyncGenerator[str, None]:
-        # Initial connection event
-        initial_data = {
-            'message': 'Connected to FastAPI SSE Server',
-            'timestamp': datetime.datetime.now().isoformat(),
-            'server_info': {
-                'framework': 'FastAPI',
-                'version': '1.0.0',
-                'client_ip': str(request.client.host) if request.client else 'unknown'
-            }
-        }
-        yield f"data: {json.dumps(initial_data)}\n\n"
-        
-        counter = 0
-        while True:
-            # Check if the client is still connected
-            if await request.is_disconnected():
-                break
-                
-            counter += 1
-            
-            try:
-                # Regular data event (every 3 loops)
-                if counter % 3 == 0:
-                    data = {
-                        'message': f'Regular update #{counter}',
-                        'timestamp': datetime.datetime.now().isoformat(),
-                        'random_value': random.randint(1, 100),
-                        'status': 'active'
-                    }
-                    yield f"data: {json.dumps(data)}\n\n"
-                
-                # Heartbeat event (every 5 loops)
-                elif counter % 5 == 0:
-                    heartbeat_data = {
-                        'server_time': datetime.datetime.now().isoformat(),
-                        'uptime_seconds': counter * 2,
-                        'memory_usage': f"{random.randint(50, 90)}%",
-                        'cpu_usage': f"{random.randint(10, 50)}%"
-                    }
-                    yield f"event: heartbeat\ndata: {json.dumps(heartbeat_data)}\n\n"
-                
-                # Notification event (every 8 loops)
-                elif counter % 8 == 0:
-                    notifications = [
-                        {'title': 'System Update', 'message': 'New version available', 'level': 'info'},
-                        {'title': 'Warning', 'message': 'High memory usage detected', 'level': 'warning'},
-                        {'title': 'Success', 'message': 'Backup completed successfully', 'level': 'success'},
-                        {'title': 'Alert', 'message': 'Connection limit reached', 'level': 'error'}
-                    ]
-                    notification = random.choice(notifications)
-                    notification['timestamp'] = datetime.datetime.now().isoformat()
-                    yield f"event: notification\ndata: {json.dumps(notification)}\n\n"
-                
-                # Simulated sensor data (every 4 loops)
-                elif counter % 4 == 0:
-                    sensor_data = {
-                        'sensor_data': {
-                            'temperature': round(random.uniform(18, 32), 2),
-                            'humidity': round(random.uniform(30, 85), 2),
-                            'pressure': round(random.uniform(995, 1025), 2),
-                            'light': round(random.uniform(0, 100), 1)
-                        },
-                        'location': 'Server Room A',
-                        'timestamp': datetime.datetime.now().isoformat()
-                    }
-                    yield f"event: sensor\ndata: {json.dumps(sensor_data)}\n\n"
-                
-                await asyncio.sleep(2)  # Interval between events
-                
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                error_data = {
-                    'error': str(e),
-                    'timestamp': datetime.datetime.now().isoformat()
-                }
-                yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
-                break
-    
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*",
-            "Access-Control-Allow-Headers": "Cache-Control",
-            "X-Accel-Buffering": "no"  # Disable nginx buffering
-        }
-    )
 
-@app.get("/metrics")
-async def stream_metrics(request: Request):
-    """
-    Real-time metrics stream
-    Sends system performance data every second
-    """
-    
-    async def metrics_generator() -> AsyncGenerator[str, None]:
-        # Initial event
-        yield f"data: {json.dumps({'message': 'Connected to the metrics stream'})}\n\n"
-        
-        while True:
-            if await request.is_disconnected():
-                break
-                
-            metrics = {
-                'timestamp': datetime.datetime.now().isoformat(),
-                'metrics': {
-                    'requests_per_second': random.randint(10, 100),
-                    'response_time_ms': random.randint(50, 300),
-                    'error_rate': round(random.uniform(0, 5), 2),
-                    'active_connections': random.randint(5, 50),
-                    'memory_usage_mb': random.randint(128, 512),
-                    'cpu_usage_percent': random.randint(10, 80),
-                    'disk_usage_percent': random.randint(20, 90),
-                    'network_io_mbps': round(random.uniform(1, 100), 2)
-                }
-            }
-            
-            yield f"data: {json.dumps(metrics)}\n\n"
-            await asyncio.sleep(1)  # Metrics every second
-    
-    return StreamingResponse(
-        metrics_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*"
-        }
-    )
 
-@app.get("/realtime/{channel}")
-async def stream_channel(channel: str, request: Request):
-    """
-    Specific channel stream
-    Allows multiple independent data channels
-    """
-    
-    async def channel_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {json.dumps({'message': f'Connected to channel: {channel}'})}\n\n"
-        
-        while True:
-            if await request.is_disconnected():
-                break
-                
-            data = {
-                'channel': channel,
-                'timestamp': datetime.datetime.now().isoformat(),
-                'data': {
-                    'value': random.randint(1, 1000),
-                    'status': random.choice(['active', 'idle', 'processing']),
-                    'users_online': random.randint(1, 25)
-                }
-            }
-            
-            yield f"data: {json.dumps(data)}\n\n"
-            await asyncio.sleep(3)
-    
-    return StreamingResponse(
-        channel_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive"
-        }
-    )
+# ==================== MCP ENDPOINTS ====================
 
-@app.post("/api/broadcast")
-async def broadcast_message(message: dict):
-    """
-    API to send a broadcast message
-    In production, use Redis/RabbitMQ for pub/sub
-    """
-    broadcast_data = {
-        'type': 'broadcast',
-        'message': message.get('message', ''),
-        'timestamp': datetime.datetime.now().isoformat(),
-        'sender': 'API'
-    }
-    
-    return {
-        'status': 'Message queued for broadcast',
-        'data': broadcast_data,
-        'timestamp': datetime.datetime.now().isoformat()
-    }
-
-# ==================== DeepWiki MCP ENDPOINTS ====================
-
-@app.get("/deepwiki/tools")
-async def list_deepwiki_tools():
-    """List available DeepWiki MCP tools"""
-    result = await deepwiki_client.list_tools()
+@app.post("/mcp/{service}/tools")
+async def list_mcp_tools(service: str):
+    client = deepwiki_client if service == "deepwiki" else context7_client
+    result = await client.list_tools()
     return {
         'status': 'success',
         'timestamp': datetime.datetime.now().isoformat(),
         'data': result
     }
 
-@app.post("/deepwiki/search")
-async def search_repository(request_data: dict):
-    """Search in a GitHub repository using DeepWiki"""
-    repository = request_data.get('repository', '')
-    query = request_data.get('query', '')
-    
-    if not repository or not query:
-        return {
-            'status': 'error',
-            'message': 'Repository and query are required',
-            'timestamp': datetime.datetime.now().isoformat()
-        }
-    
-    arguments = {
-        'repository': repository,
-        'query': query
-    }
-    
-    result = await deepwiki_client.call_tool('search', arguments)
-    return {
-        'status': 'success',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'data': result
-    }
-
-@app.post("/deepwiki/analyze")
+@app.post("/mcp/deepwiki/analyze")
 async def analyze_repository(request_data: dict):
-    """Analyze a GitHub repository using DeepWiki"""
     repository = request_data.get('repository', '')
-    focus = request_data.get('focus', 'general')
-    
     if not repository:
-        return {
-            'status': 'error',
-            'message': 'Repository is required',
-            'timestamp': datetime.datetime.now().isoformat()
-        }
+        return {'status': 'error', 'message': 'Repository is required'}
     
-    arguments = {
-        'repository': repository,
-        'focus': focus
-    }
-    
-    result = await deepwiki_client.call_tool('analyze', arguments)
+    result = await deepwiki_client.call_tool('analyze', {'repository': repository})
     return {
         'status': 'success',
         'timestamp': datetime.datetime.now().isoformat(),
         'data': result
     }
 
-@app.get("/deepwiki/stream/{repository}")
-async def stream_deepwiki_analysis(repository: str, request: Request):
-    """Stream DeepWiki analysis results via SSE"""
+@app.post("/mcp/context7/docs")
+async def get_library_docs(request_data: dict):
+    library = request_data.get('library', '')
+    if not library:
+        return {'status': 'error', 'message': 'Library is required'}
     
-    async def deepwiki_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {json.dumps({'message': f'Starting analysis for {repository}'})}\n\n"
-        
-        try:
-            # Get repository analysis
-            result = await deepwiki_client.call_tool('analyze', {'repository': repository})
-            
-            if 'error' not in result:
-                yield f"data: {json.dumps({'type': 'analysis', 'data': result})}\n\n"
-            else:
-                yield f"data: {json.dumps({'type': 'error', 'message': result.get('error', 'Unknown error')})}\n\n"
-                
-        except Exception as e:
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-        
-        # Final completion event
-        yield f"data: {json.dumps({'type': 'complete', 'message': 'Analysis completed'})}\n\n"
-    
-    return StreamingResponse(
-        deepwiki_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "Access-Control-Allow-Origin": "*"
-        }
-    )
+    result = await context7_client.call_tool('get_library_docs', {'library': library})
+    return {
+        'status': 'success',
+        'timestamp': datetime.datetime.now().isoformat(),
+        'data': result
+    }
 
 @app.get("/health")
 async def health_check():
@@ -775,18 +397,15 @@ async def health_check():
     return {
         'status': 'healthy',
         'timestamp': datetime.datetime.now().isoformat(),
-        'server': 'FastAPI SSE Server with DeepWiki MCP',
-        'version': '1.0.0'
+        'server': 'FastAPI SSE Server with Generic MCP',
+        'version': '1.0.0',
+        'services': ['DeepWiki', 'Context7']
     }
 
 if __name__ == "__main__":
-    print("🚀 FastAPI SSE Server with DeepWiki MCP starting...")
+    print("🚀 FastAPI MCP Client starting...")
+    print("✅ Live services enabled for DeepWiki and Context7")
     print("📱 Interface: http://127.0.0.1:8000")
-    print("📡 Stream: http://127.0.0.1:8000/stream")
-    print("📊 Metrics: http://127.0.0.1:8000/metrics")
-    print("🔗 Channel: http://127.0.0.1:8000/realtime/{channel}")
-    print("🔍 DeepWiki Tools: http://127.0.0.1:8000/deepwiki/tools")
-    print("🔍 DeepWiki Stream: http://127.0.0.1:8000/deepwiki/stream/{repository}")
     print("❤️  Health: http://127.0.0.1:8000/health")
     
     uvicorn.run(

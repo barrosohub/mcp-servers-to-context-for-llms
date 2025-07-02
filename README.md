@@ -1,24 +1,22 @@
-# 🚀 FastAPI Server-Sent Events (SSE) + DeepWiki MCP Tutorial
+# 🚀 FastAPI SSE with Generic MCP Client
 
-This project demonstrates a complete implementation of **Server-Sent Events** using FastAPI with **DeepWiki MCP integration**, including a server, Python client, and web interface for GitHub repository analysis.
+This project demonstrates a complete implementation of **Server-Sent Events (SSE)** using FastAPI, integrated with a **generic Model Context Protocol (MCP) client** supporting both **DeepWiki** and **Context7**.
 
 ## 📋 Features
 
 - ✅ **FastAPI Server** with multiple SSE endpoints
-- ✅ **DeepWiki MCP Integration** for GitHub repository analysis
-- ✅ **Modern and interactive Web Interface**
-- ✅ **Python Client** for consuming streams
+- ✅ **Generic MCP Integration** for services like DeepWiki and Context7
+- ✅ **Mocked Backend** for local development and testing
+- ✅ **Modern and Interactive Web Interface** to test all features
+- ✅ **Python Client** for consuming streams and testing MCP endpoints
 - ✅ **Multiple event types**: heartbeat, notifications, metrics, sensors
-- ✅ **Support for custom channels**
-- ✅ **Broadcast API**
-- ✅ **Real-time GitHub repository analysis**
-- ✅ **Automated tests**
+- ✅ **Real-time GitHub repository analysis** via DeepWiki
+- ✅ **AI-powered documentation retrieval** via Context7
+- ✅ **Automated and interactive tests**
 
 ## ⚙️ Environment Setup
 
 ### 1. Running with Docker (Recommended)
-
-This project is equipped with a `Dockerfile` for easy containerization.
 
 **Build the Docker image:**
 ```bash
@@ -35,6 +33,11 @@ The application will be accessible at `http://localhost:8000`.
 
 #### Install Dependencies
 ```bash
+# Create and activate a virtual environment (recommended)
+python3 -m venv venv
+source venv/bin/activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -42,43 +45,34 @@ pip install -r requirements.txt
 ```bash
 python main.py
 ```
+By default, the server runs with **mocked MCP services**. To use the live services, you must edit `main.py` and set `USE_MOCKS = False`.
 
-The server will start at `http://127.0.0.1:8000` with the following endpoints:
-
-- 🏠 **Web Interface**: `http://127.0.0.1:8000/`
-- 📡 **Main Stream**: `http://127.0.0.1:8000/stream`
-- 📊 **Metrics**: `http://127.0.0.1:8000/metrics`
-- 🔗 **Custom Channel**: `http://127.0.0.1:8000/realtime/{channel-name}`
-- 🔍 **DeepWiki Tools**: `http://127.0.0.1:8000/deepwiki/tools`
-- 🔍 **DeepWiki Stream**: `http://127.0.0.1:8000/deepwiki/stream/{repository}`
-- ❤️ **Health Check**: `http://127.0.0.1:8000/health`
+The server will start at `http://127.0.0.1:8000`.
 
 ## 🌐 Web Interface
 
 Access `http://127.0.0.1:8000` to see the full web interface with:
 
-- **Simultaneous connection** to multiple streams
-- **Real-time statistics**
-- **Modern and responsive interface**
-- **Interactive controls** to connect/disconnect streams
-- **DeepWiki repository analysis** with real-time results
-- **GitHub repository search and analysis tools**
+- **Simultaneous connection** to multiple SSE streams
+- **Interactive controls** for DeepWiki (repository analysis) and Context7 (documentation retrieval)
+- **Real-time event display** and statistics
 
 ## 🐍 Python Client
 
-Run the Python client to test the endpoints:
+Run the Python client to test the endpoints from your terminal:
 
 ```bash
 python client.py
 ```
 
 The client offers an interactive menu to:
-1. Connect to the main stream
-2. Connect to metrics
-3. Connect to a custom channel
-4. Test the broadcast API
+1. Connect to the main SSE stream
+2. Connect to the metrics stream
+3. Test DeepWiki and Context7 endpoints
 
 ## 🧪 Run Tests
+
+First, ensure the server is running: `python main.py`
 
 ### Automated Tests
 ```bash
@@ -92,227 +86,50 @@ python test_sse.py
 
 The tests verify:
 - ✅ Server health check
-- ✅ Main event stream
-- ✅ Metrics stream
-- ✅ Custom channels
-- ✅ Broadcast API
+- ✅ SSE streams (main and metrics)
+- ✅ MCP endpoints for DeepWiki and Context7 using the mocked server
 
 ## 📊 Available Endpoints
 
-### 🏠 GET `/`
-Main web interface with an integrated SSE client.
+### SSE Streams
+- **GET `/stream`**: Main event stream with messages, heartbeats, etc.
+- **GET `/metrics`**: Real-time system metrics stream.
 
-### 📡 GET `/stream`
-Main event stream with:
-- Regular messages
-- Heartbeat events
-- System notifications
-- Simulated sensor data
+### MCP Endpoints
+- **POST `/mcp/deepwiki/tools`**: List available tools for DeepWiki.
+- **POST `/mcp/deepwiki/analyze`**: Analyze a repository.
+  ```json
+  { "repository": "microsoft/vscode" }
+  ```
+- **POST `/mcp/context7/tools`**: List available tools for Context7.
+- **POST `/mcp/context7/docs`**: Get documentation for a library.
+  ```json
+  { "library": "/vercel/next.js" }
+  ```
 
-### 📊 GET `/metrics`
-Real-time metrics stream:
-- CPU and memory
-- Requests per second
-- Error rate
-- Network I/O
+### Health Check
+- **GET `/health`**: Server health check.
 
-### 🔗 GET `/realtime/{channel}`
-Custom channel for specific streams.
+## 🔧 Consuming with Tools (Examples)
 
-### 💬 POST `/api/broadcast`
-API to send broadcast messages:
-```json
-{
-  "message": "Your message here",
-  "timestamp": "2024-01-01T12:00:00Z"
-}
-```
-
-### ❤️ GET `/health`
-Server health check.
-
-## 🔍 DeepWiki MCP Integration
-
-### 🛠️ GET `/deepwiki/tools`
-Lists available DeepWiki MCP tools.
-
-### 🔍 POST `/deepwiki/search`
-Search in GitHub repositories using DeepWiki:
-```json
-{
-  "repository": "microsoft/vscode",
-  "query": "extension development"
-}
-```
-
-### 📋 POST `/deepwiki/analyze`
-Analyze GitHub repositories:
-```json
-{
-  "repository": "microsoft/vscode",
-  "focus": "general"
-}
-```
-
-### 📡 GET `/deepwiki/stream/{repository}`
-Real-time streaming analysis of GitHub repositories via SSE.
-
-**Example:** `http://127.0.0.1:8000/deepwiki/stream/microsoft/vscode`
-
-## 🛠️ Consuming with Tools
-
-### 📮 Postman
-1. Create a new GET request
-2. URL: `http://127.0.0.1:8000/stream`
-3. Headers:
-   ```
-   Accept: text/event-stream
-   Cache-Control: no-cache
-   ```
-
-### 💻 VSCode (REST Client)
-```http
-### SSE Stream
-GET http://127.0.0.1:8000/stream
-Accept: text/event-stream
-
-### Metrics
-GET http://127.0.0.1:8000/metrics
-Accept: text/event-stream
-```
-
-### 🔧 cURL
+### cURL
 ```bash
-# Main stream
+# Main SSE stream
 curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/stream
 
-# Metrics
-curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/metrics
-
-# DeepWiki tools
-curl http://127.0.0.1:8000/deepwiki/tools
-
-# DeepWiki search
-curl -X POST http://127.0.0.1:8000/deepwiki/search \
+# Analyze a repository with DeepWiki
+curl -X POST http://127.0.0.1:8000/mcp/deepwiki/analyze \
   -H "Content-Type: application/json" \
-  -d '{"repository": "microsoft/vscode", "query": "extension development"}'
+  -d '{"repository": "microsoft/vscode"}'
 
-# DeepWiki streaming analysis
-curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/deepwiki/stream/microsoft/vscode
+# Get library docs with Context7
+curl -X POST http://127.0.0.1:8000/mcp/context7/docs \
+  -H "Content-Type: application/json" \
+  -d '{"library": "/vercel/next.js"}'
 
 # Health check
 curl http://127.0.0.1:8000/health
 ```
-
-## 📝 Project Structure
-
-```
-fastapi-sse-tutorial/
-├── main.py           # Main FastAPI server
-├── client.py         # Python client to consume SSE
-├── test_sse.py       # Automated tests
-├── requirements.txt  # Project dependencies
-└── README.md         # Documentation
-```
-
-## 🔧 Dependencies
-
-- **FastAPI**: Modern web framework
-- **Uvicorn**: ASGI server
-- **Requests**: HTTP client for tests
-- **HTTPx**: Async HTTP client for MCP communication
-- **UUID**: Unique identifier generation for MCP requests
-- **SSEClient-py**: Server-Sent Events client
-
-## 🎯 Use Cases
-
-This project demonstrates how to implement:
-
-- 📊 **Real-time dashboards**
-- 🔔 **Push notifications**
-- 📈 **System monitoring**
-- 🌡️ **IoT sensor data**
-- 💬 **Activity feeds**
-- 🔍 **GitHub repository analysis**
-- 🤖 **MCP (Model Context Protocol) integration**
-- 📋 **AI-powered documentation analysis**
-
-## 🔄 Event Flow
-
-1. Client connects to the SSE endpoint
-2. Server sends an initial connection event
-3. Server generates periodic events:
-   - **Every 2s**: Regular messages or special events
-   - **Every 4s**: Sensor data
-   - **Every 5s**: Heartbeat
-   - **Every 8s**: Notifications
-4. Client processes events in real-time
-
-## 🎨 Event Types
-
-- **`message`**: Standard events with general data
-- **`heartbeat`**: Server life signals
-- **`notification`**: Alerts and notifications
-- **`sensor`**: Simulated sensor data
-- **`error`**: Error messages
-- **`deepwiki`**: DeepWiki MCP events
-- **`analysis`**: Repository analysis results
-- **`tools`**: Available MCP tools information
-
-## 🚦 Server Status
-
-The server indicates its status through:
-- ✅ **200 OK**: Server is running
-- 🔄 **Connection keep-alive**: SSE connection is active
-- 📡 **text/event-stream**: Correct Content-Type
-
-## 📱 Compatibility
-
-- ✅ **Modern browsers** (Chrome, Firefox, Safari, Edge)
-- ✅ **Custom Python client**
-- ✅ **API tools** (Postman, VSCode, cURL)
-- ✅ **Mobile** (through the responsive web interface)
-
-## 🔧 Troubleshooting
-
-### Problem: Server doesn't start
-```bash
-# Check if port 8000 is busy
-netstat -tulpn | grep :8000
-
-# Try a different port
-uvicorn main:app --host 127.0.0.1 --port 8080
-```
-
-### Problem: Events don't arrive
-1. Check if the server is running: `curl http://127.0.0.1:8000/health`
-2. Confirm SSE headers: `Accept: text/event-stream`
-3. Disable cache: `Cache-Control: no-cache`
-
-### Problem: CORS errors
-The server is already configured with permissive CORS for development. In production, configure specific domains.
-
-## 🎓 Next Steps
-
-To expand this project:
-
-1. 🔐 **Add JWT authentication**
-2. 📊 **Integrate Prometheus metrics**
-3. 🔄 **Set up Redis for distributed pub/sub**
-4. 🐳 **Containerize with Docker**
-5. ☁️ **Deploy to the cloud**
-6. 🔍 **Add more MCP servers integration**
-7. 📋 **Implement repository caching**
-8. 🤖 **Add AI-powered code analysis**
-
-## 📚 Useful Resources
-
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [Server-Sent Events MDN](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
-- [EventSource API](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
-- [DeepWiki MCP](https://deepwiki.com/)
-- [Model Context Protocol](https://spec.modelcontextprotocol.io/)
-- [HTTPx Documentation](https://www.python-httpx.org/)
 
 ---
 
