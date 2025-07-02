@@ -3,4 +3,3 @@ uvicorn[standard]==0.24.0
 requests==2.31.0
 sseclient-py==1.8.0
 httpx==0.25.2
-uuid==1.30

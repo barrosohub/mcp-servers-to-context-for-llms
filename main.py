@@ -1,222 +1,178 @@
 # -*- coding: utf-8 -*-
-from fastapi import FastAPI, Request
-from fastapi.responses import StreamingResponse, HTMLResponse
+"""
+FastAPI MCP Client - Clean Architecture Implementation
+Real MCP Context7 integration without mocks
+"""
+from fastapi import FastAPI, HTTPException
+from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
-import json
-import asyncio
-import datetime
-import random
-from typing import AsyncGenerator, Dict, Any
+from typing import Dict, Any
 import uvicorn
-import httpx
-import uuid
 
+from mcp_service import mcp_service, deepwiki_service
+
+# App configuration
 app = FastAPI(
-    title="FastAPI SSE Server", 
-    version="1.0.0",
-    description="Server-Sent Events with FastAPI"
+    title="FastAPI MCP Client", 
+    version="2.0.0",
+    description="Real MCP Context7 and DeepWiki integration"
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify domains
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==================== COMPLETE HTML TEMPLATE ====================
-
+# UI Template - Simplified and Clean
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FastAPI SSE Demo</title>
+    <title>FastAPI MCP Client</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            margin: 0; 
-            padding: 40px; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
+            min-height: 100vh; padding: 20px;
         }
         .container { 
-            max-width: 1000px; 
-            margin: 0 auto; 
-            background: white; 
-            padding: 30px; 
-            border-radius: 15px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2); 
+            max-width: 900px; margin: 0 auto; background: white; 
+            padding: 30px; border-radius: 12px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
         }
-        .header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            color: #333;
-        }
+        .header { text-align: center; margin-bottom: 30px; }
+        .header h1 { color: #333; margin-bottom: 10px; }
+        .header p { color: #666; }
         .controls { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
-            gap: 20px; 
-            margin-bottom: 30px; 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 20px; margin-bottom: 30px; 
         }
         .control-group {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
+            background: #f8f9fa; padding: 20px; border-radius: 8px;
             border-left: 4px solid #007bff;
+        }
+        .control-group h4 { margin-bottom: 15px; color: #333; }
+        input { 
+            width: 100%; padding: 10px; margin: 8px 0; 
+            border: 1px solid #ddd; border-radius: 4px; font-size: 14px;
         }
         button { 
-            padding: 12px 24px; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-weight: 600; 
-            margin: 5px;
-            transition: all 0.3s ease;
+            padding: 10px 20px; margin: 5px; border: none; 
+            border-radius: 4px; cursor: pointer; font-weight: 600;
+            transition: background 0.2s;
         }
-        .btn-connect { background: #28a745; color: white; }
-        .btn-disconnect { background: #dc3545; color: white; }
-        .btn-clear { background: #6c757d; color: white; }
-        button:hover { transform: translateY(-2px); opacity: 0.9; }
-        .status { 
-            padding: 15px; 
-            border-radius: 6px; 
-            font-weight: 600; 
-            text-align: center; 
-            margin: 10px 0;
+        .btn-primary { background: #007bff; color: white; }
+        .btn-primary:hover { background: #0056b3; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-secondary:hover { background: #545b62; }
+        .results { 
+            background: #1a1a1a; border-radius: 8px; padding: 20px;
+            min-height: 300px; overflow-y: auto; color: #f8f9fa;
+            font-family: 'Monaco', 'Menlo', monospace; font-size: 13px;
         }
-        .connected { background: #d4edda; color: #155724; }
-        .disconnected { background: #f8d7da; color: #721c24; }
-        .events-container { 
-            height: 400px; 
-            overflow-y: auto; 
-            background: #1a1a1a; 
-            border-radius: 10px; 
-            padding: 20px;
-            font-family: 'Courier New', monospace;
+        .result { 
+            background: #2d2d2d; padding: 15px; margin: 10px 0; 
+            border-radius: 4px; border-left: 4px solid #007bff;
         }
-        .event { 
-            background: #2d2d2d; 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 5px; 
-            border-left: 4px solid #007bff;
-            color: #f8f9fa;
-            font-size: 13px;
+        .result.error { border-left-color: #dc3545; }
+        .result.success { border-left-color: #28a745; }
+        .result-header { 
+            display: flex; justify-content: space-between; 
+            margin-bottom: 10px; font-weight: bold;
         }
-        .event.heartbeat { border-left-color: #28a745; }
-        .event.notification { border-left-color: #ffc107; }
-        .event.sensor { border-left-color: #17a2b8; }
-        .event.metrics { border-left-color: #fd7e14; }
-        .event.deepwiki { border-left-color: #8a2be2; }
-        .event.context7 { border-left-color: #ff69b4; }
-        .event-header { 
-            display: flex; 
-            justify-content: space-between; 
-            margin-bottom: 8px; 
-            font-weight: bold;
-        }
-        .stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-        }
-        .stat-card {
-            background: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #007bff;
-        }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <h1>🚀 FastAPI MCP Client</h1>
-            <p>A demonstration of DeepWiki and Context7 integration</p>
+            <p>Real Context7 and DeepWiki integration</p>
         </div>
         
         <div class="controls">
             <div class="control-group">
-                <h4>🔍 DeepWiki</h4>
-                <input type="text" id="repoInput" placeholder="org/repo (e.g., microsoft/vscode)" style="width:100%; padding:8px; margin:5px 0; border:1px solid #ddd; border-radius:4px;">
-                <button class="btn-connect" onclick="analyzeRepo()">Analyze Repo</button>
-                <button class="btn-connect" onclick="listDeepWikiTools()">List Tools</button>
+                <h4>� Context7</h4>
+                <input type="text" id="libraryInput" placeholder="Library name (e.g., next.js, react, vue)">
+                <button class="btn-primary" onclick="resolveLibrary()">Resolve Library</button>
+                <button class="btn-primary" onclick="getLibraryDocs()">Get Documentation</button>
+                <input type="text" id="libraryIdInput" placeholder="Library ID (e.g., /vercel/next.js)">
+                <button class="btn-primary" onclick="getDocsById()">Get Docs by ID</button>
             </div>
 
             <div class="control-group">
-                <h4>📚 Context7</h4>
-                <input type="text" id="libraryInput" placeholder="library (e.g., /vercel/next.js)" style="width:100%; padding:8px; margin:5px 0; border:1px solid #ddd; border-radius:4px;">
-                <button class="btn-connect" onclick="getLibraryDocs()">Get Docs</button>
-                <button class="btn-connect" onclick="listContext7Tools()">List Tools</button>
+                <h4>🔍 DeepWiki</h4>
+                <input type="text" id="repoInput" placeholder="Repository (e.g., vercel/next.js)">
+                <button class="btn-primary" onclick="analyzeRepo()">Analyze Repository</button>
+                <button class="btn-secondary" onclick="listDeepWikiTools()">List Tools</button>
             </div>
             
             <div class="control-group">
-                <h4>🎛️ Controls</h4>
-                <button class="btn-clear" onclick="clearEvents()">Clear Events</button>
+                <h4>🛠️ Controls</h4>
+                <button class="btn-secondary" onclick="clearResults()">Clear Results</button>
+                <button class="btn-secondary" onclick="checkHealth()">Health Check</button>
             </div>
         </div>
         
-        <div class="events-container" id="eventsContainer">
-            <div class="event">
-                <div class="event-header">
-                    <span>🚀 SYSTEM</span>
-                    <span id="initialTime"></span>
+        <div class="results" id="results">
+            <div class="result">
+                <div class="result-header">
+                    <span>🚀 SYSTEM READY</span>
+                    <span id="initTime"></span>
                 </div>
-                <div>MCP client initiated. Use the controls to interact with the services.</div>
+                <div>MCP client initialized. Ready to interact with Context7 and DeepWiki.</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Initialize timestamp
-        document.getElementById('initialTime').textContent = new Date().toLocaleTimeString();
+        document.getElementById('initTime').textContent = new Date().toLocaleTimeString();
         
-        const eventsContainer = document.getElementById('eventsContainer');
-        
-        function addEvent(source, type, data) {
-            const eventDiv = document.createElement('div');
-            eventDiv.className = `event ${type}`;
+        function addResult(type, title, data) {
+            const results = document.getElementById('results');
+            const result = document.createElement('div');
+            result.className = `result ${type}`;
             
             const timestamp = new Date().toLocaleTimeString();
-            const icons = {
-                deepwiki: '🔍', context7: '📚', tools: '🛠️', 
-                analysis: '📋', docs: '📄', error: '❌'
-            };
+            const icon = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
             
-            let displayData;
+            let displayData = '';
             try {
-                const parsed = JSON.parse(data);
-                displayData = JSON.stringify(parsed, null, 2);
+                displayData = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
             } catch {
-                displayData = data;
+                displayData = String(data);
             }
             
-            eventDiv.innerHTML = `
-                <div class="event-header">
-                    <span>${icons[type] || 'ℹ️'} ${type.toUpperCase()}</span>
+            result.innerHTML = `
+                <div class="result-header">
+                    <span>${icon} ${title}</span>
                     <span>${timestamp}</span>
                 </div>
-                <div><pre><code>${displayData}</code></pre></div>
+                <pre>${displayData}</pre>
             `;
             
-            eventsContainer.insertBefore(eventDiv, eventsContainer.firstChild);
+            results.insertBefore(result, results.firstChild);
         }
         
-        function clearEvents() { 
-            eventsContainer.innerHTML = '<div class="event"><div class="event-header"><span>🧹 SYSTEM</span><span>' + new Date().toLocaleTimeString() + '</span></div><div>Events cleared.</div></div>'; 
+        function clearResults() {
+            document.getElementById('results').innerHTML = `
+                <div class="result">
+                    <div class="result-header">
+                        <span>🧹 CLEARED</span>
+                        <span>${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div>Results cleared.</div>
+                </div>
+            `;
         }
         
-        // MCP functions
-        async function callMcpService(service, endpoint, payload, eventType) {
+        async function apiCall(endpoint, payload, title) {
             try {
                 const response = await fetch(endpoint, {
                     method: 'POST',
@@ -224,188 +180,148 @@ HTML_TEMPLATE = """
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
-                if (response.ok) {
-                    addEvent(service, eventType, JSON.stringify(result.data, null, 2));
+                
+                if (response.ok && result.status === 'success') {
+                    addResult('success', title, result.data);
                 } else {
-                    addEvent(service, 'error', JSON.stringify(result, null, 2));
+                    addResult('error', title, result.message || 'Unknown error');
                 }
             } catch (error) {
-                addEvent(service, 'error', `Error calling ${service}: ${error.message}`);
+                addResult('error', title, `Network error: ${error.message}`);
             }
-        }
-
-        // DeepWiki functions
-        function listDeepWikiTools() {
-            callMcpService('deepwiki', '/mcp/deepwiki/tools', {}, 'tools');
         }
         
-        function analyzeRepo() {
-            const repository = document.getElementById('repoInput').value.trim();
-            if (!repository) {
-                addEvent('deepwiki', 'error', 'Please enter a repository name (e.g., microsoft/vscode)');
+        function resolveLibrary() {
+            const library = document.getElementById('libraryInput').value.trim();
+            if (!library) {
+                addResult('error', 'RESOLVE LIBRARY', 'Please enter a library name');
                 return;
             }
-            callMcpService('deepwiki', '/mcp/deepwiki/analyze', { repository: repository }, 'analysis');
+            apiCall('/mcp/context7/resolve', { library_name: library }, 'RESOLVE LIBRARY');
         }
-
-        // Context7 functions
-        function listContext7Tools() {
-            callMcpService('context7', '/mcp/context7/tools', {}, 'tools');
-        }
-
+        
         function getLibraryDocs() {
             const library = document.getElementById('libraryInput').value.trim();
             if (!library) {
-                addEvent('context7', 'error', 'Please enter a library name (e.g., /vercel/next.js)');
+                addResult('error', 'GET DOCS', 'Please enter a library name');
                 return;
             }
-            callMcpService('context7', '/mcp/context7/docs', { library: library }, 'docs');
+            apiCall('/mcp/context7/docs', { library_name: library }, 'GET DOCUMENTATION');
+        }
+        
+        function getDocsById() {
+            const libraryId = document.getElementById('libraryIdInput').value.trim();
+            if (!libraryId) {
+                addResult('error', 'GET DOCS BY ID', 'Please enter a library ID');
+                return;
+            }
+            apiCall('/mcp/context7/docs-by-id', { library_id: libraryId }, 'GET DOCS BY ID');
+        }
+        
+        function analyzeRepo() {
+            const repo = document.getElementById('repoInput').value.trim();
+            if (!repo) {
+                addResult('error', 'ANALYZE REPO', 'Please enter a repository name');
+                return;
+            }
+            apiCall('/mcp/deepwiki/analyze', { repository: repo }, 'ANALYZE REPOSITORY');
+        }
+        
+        function listDeepWikiTools() {
+            apiCall('/mcp/deepwiki/tools', {}, 'DEEPWIKI TOOLS');
+        }
+        
+        async function checkHealth() {
+            try {
+                const response = await fetch('/health');
+                const result = await response.json();
+                addResult('success', 'HEALTH CHECK', result);
+            } catch (error) {
+                addResult('error', 'HEALTH CHECK', `Error: ${error.message}`);
+            }
         }
     </script>
 </body>
 </html>
 """
 
-# ==================== GENERIC MCP CLIENT ====================
-
-class MCPClient:
-    """Generic MCP Client for handling different services."""
-    def __init__(self, base_url: str, service_name: str):
-        self.base_url = base_url
-        self.service_name = service_name
-        self.session_id = None
-        self.client = httpx.AsyncClient()
-
-    async def initialize_session(self) -> bool:
-        payload = {
-            "jsonrpc": "2.0", "id": 1, "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05", "capabilities": {"tools": {}},
-                "clientInfo": {"name": f"fastapi-client-{self.service_name}", "version": "1.0.0"}
-            }
-        }
-        headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
-        try:
-            response = await self.client.post(self.base_url, json=payload, headers=headers)
-            response.raise_for_status()
-            self.session_id = response.headers.get("mcp-session-id")
-            if self.session_id:
-                print(f"MCP session initialized for {self.service_name} with session ID: {self.session_id}")
-                return True
-            print(f"Error: MCP session ID not found in response for {self.service_name}")
-            return False
-        except httpx.HTTPStatusError as e:
-            print(f"HTTP error initializing MCP session for {self.service_name}: {e.response.status_code} - {e.response.text}")
-        except Exception as e:
-            print(f"Error initializing MCP session for {self.service_name}: {e}")
-        return False
-
-    async def call_method(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
-        if not self.session_id and not await self.initialize_session():
-            return {"error": f"Failed to initialize session for {self.service_name}"}
-        
-        payload = {"jsonrpc": "2.0", "id": str(uuid.uuid4()), "method": method, "params": params or {}}
-        headers = {
-            "Content-Type": "application/json", "Accept": "application/json, text/event-stream",
-            "Mcp-Session-Id": self.session_id
-        }
-        try:
-            response = await self.client.post(self.base_url, json=payload, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            error_message = f"HTTP error calling method {method} on {self.service_name}: {e.response.status_code}"
-            try:
-                error_details = e.response.json()
-                error_message += f" - {error_details.get('error', {}).get('message', e.response.text)}"
-            except json.JSONDecodeError:
-                error_message += f" - {e.response.text}"
-            print(error_message)
-            return {"error": error_message}
-        except Exception as e:
-            print(f"Error calling method {method} on {self.service_name}: {e}")
-            return {"error": f"Failed to call method {method} on {self.service_name}"}
-
-    async def list_tools(self) -> Dict[str, Any]:
-        return await self.call_method("tools/list")
-
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        return await self.call_method("tools/call", {"name": tool_name, "arguments": arguments})
-
-# ==================== SERVICE CLIENTS ====================
-
-# Configure clients for DeepWiki and Context7
-USE_MOCKS = False # Set to False to use live services
-
-if USE_MOCKS:
-    deepwiki_client = MCPClient("http://localhost:8000/mock/deepwiki", "DeepWiki")
-    context7_client = MCPClient("http://localhost:8000/mock/context7", "Context7")
-else:
-    deepwiki_client = MCPClient("https://mcp.deepwiki.com/mcp", "DeepWiki")
-    context7_client = MCPClient("https://mcp.context7.com/mcp", "Context7")
-
-# ==================== ENDPOINTS ====================
-
+# Routes
 @app.get("/", response_class=HTMLResponse)
-async def get_home():
-    """Main page with integrated SSE client"""
+def get_home():
+    """Main interface"""
     return HTMLResponse(content=HTML_TEMPLATE)
 
 
-
-# ==================== MCP ENDPOINTS ====================
-
-@app.post("/mcp/{service}/tools")
-async def list_mcp_tools(service: str):
-    client = deepwiki_client if service == "deepwiki" else context7_client
-    result = await client.list_tools()
-    return {
-        'status': 'success',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'data': result
-    }
-
-@app.post("/mcp/deepwiki/analyze")
-async def analyze_repository(request_data: dict):
-    repository = request_data.get('repository', '')
-    if not repository:
-        return {'status': 'error', 'message': 'Repository is required'}
-    
-    result = await deepwiki_client.call_tool('analyze', {'repository': repository})
-    return {
-        'status': 'success',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'data': result
-    }
-
-@app.post("/mcp/context7/docs")
-async def get_library_docs(request_data: dict):
-    library = request_data.get('library', '')
-    if not library:
-        return {'status': 'error', 'message': 'Library is required'}
-    
-    result = await context7_client.call_tool('get_library_docs', {'library': library})
-    return {
-        'status': 'success',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'data': result
-    }
-
 @app.get("/health")
-async def health_check():
+def health_check():
     """Health check endpoint"""
     return {
-        'status': 'healthy',
-        'timestamp': datetime.datetime.now().isoformat(),
-        'server': 'FastAPI SSE Server with Generic MCP',
-        'version': '1.0.0',
-        'services': ['DeepWiki', 'Context7']
+        "status": "healthy",
+        "server": "FastAPI MCP Client",
+        "version": "2.0.0",
+        "services": ["Context7", "DeepWiki"]
     }
 
+
+# Context7 Endpoints
+@app.post("/mcp/context7/resolve")
+def resolve_library(request_data: Dict[str, Any]):
+    """Resolve library name to Context7 ID"""
+    library_name = request_data.get("library_name")
+    if not library_name:
+        raise HTTPException(status_code=400, detail="library_name is required")
+    
+    return mcp_service.resolve_library_id(library_name)
+
+
+@app.post("/mcp/context7/docs")
+def get_library_documentation(request_data: Dict[str, Any]):
+    """Get library documentation by resolving name first"""
+    library_name = request_data.get("library_name")
+    if not library_name:
+        raise HTTPException(status_code=400, detail="library_name is required")
+    
+    tokens = request_data.get("tokens", 5000)
+    topic = request_data.get("topic", "")
+    
+    return mcp_service.resolve_and_get_docs(library_name, tokens, topic)
+
+
+@app.post("/mcp/context7/docs-by-id")
+def get_docs_by_library_id(request_data: Dict[str, Any]):
+    """Get documentation by library ID directly"""
+    library_id = request_data.get("library_id")
+    if not library_id:
+        raise HTTPException(status_code=400, detail="library_id is required")
+    
+    tokens = request_data.get("tokens", 5000)
+    topic = request_data.get("topic", "")
+    
+    return mcp_service.get_library_docs(library_id, tokens, topic)
+
+
+# DeepWiki Endpoints
+@app.post("/mcp/deepwiki/analyze")
+def analyze_repository(request_data: Dict[str, Any]):
+    """Analyze GitHub repository"""
+    repository = request_data.get("repository")
+    if not repository:
+        raise HTTPException(status_code=400, detail="repository is required")
+    
+    return deepwiki_service.analyze_repository(repository)
+
+
+@app.post("/mcp/deepwiki/tools")
+def list_deepwiki_tools(request_data: Dict[str, Any] = None):
+    """List DeepWiki tools"""
+    return deepwiki_service.list_tools()
+
+
 if __name__ == "__main__":
-    print("🚀 FastAPI MCP Client starting...")
-    print("✅ Live services enabled for DeepWiki and Context7")
-    print("📱 Interface: http://127.0.0.1:8000")
+    print("🚀 FastAPI MCP Client v2.0 starting...")
+    print("� Real Context7 MCP integration")
+    print("� DeepWiki integration")
+    print("🌐 Interface: http://127.0.0.1:8000")
     print("❤️  Health: http://127.0.0.1:8000/health")
     
     uvicorn.run(
