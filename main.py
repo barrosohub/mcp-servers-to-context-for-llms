@@ -349,99 +349,128 @@ HTML_TEMPLATE = """
 </html>
 """
 
-# ==================== DeepWiki MCP CLIENT ====================
+# ==================== GENERIC MCP CLIENT ====================
 
-class DeepWikiMCPClient:
-    def __init__(self):
-        self.base_url = "https://mcp.deepwiki.com/mcp"
+class MCPClient:
+    """Generic MCP Client for handling different services."""
+    def __init__(self, base_url: str, service_name: str):
+        self.base_url = base_url
+        self.service_name = service_name
         self.session_id = None
         self.client = httpx.AsyncClient()
-        
-    async def initialize_session(self) -> bool:
-        """Initialize MCP session with DeepWiki"""
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2024-11-05",
-                "capabilities": {"tools": {}},
-                "clientInfo": {"name": "fastapi-client", "version": "1.0.0"}
-            }
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream"
-        }
-        
-        try:
-            response = await self.client.post(self.base_url, json=payload, headers=headers)
-            if response.status_code == 200:
-                # Extract session ID from headers
-                self.session_id = response.headers.get("mcp-session-id")
-                return True
-        except Exception as e:
-            print(f"Error initializing MCP session: {e}")
-        return False
-    
-    async def list_tools(self) -> Dict[str, Any]:
-        """List available tools from DeepWiki MCP"""
-        if not self.session_id:
-            await self.initialize_session()
-            
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {}
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-            "Mcp-Session-Id": self.session_id
-        }
-        
-        try:
-            response = await self.client.post(self.base_url, json=payload, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            print(f"Error listing tools: {e}")
-        return {"error": "Failed to list tools"}
-    
-    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
-        """Call a specific tool via DeepWiki MCP"""
-        if not self.session_id:
-            await self.initialize_session()
-            
-        payload = {
-            "jsonrpc": "2.0",
-            "id": str(uuid.uuid4()),
-            "method": "tools/call",
-            "params": {
-                "name": tool_name,
-                "arguments": arguments
-            }
-        }
-        
-        headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json, text/event-stream",
-            "Mcp-Session-Id": self.session_id
-        }
-        
-        try:
-            response = await self.client.post(self.base_url, json=payload, headers=headers)
-            if response.status_code == 200:
-                return response.json()
-        except Exception as e:
-            print(f"Error calling tool {tool_name}: {e}")
-        return {"error": f"Failed to call tool {tool_name}"}
 
-# Global MCP client instance
-deepwiki_client = DeepWikiMCPClient()
+    async def initialize_session(self) -> bool:
+        payload = {
+            "jsonrpc": "2.0", "id": 1, "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05", "capabilities": {"tools": {}},
+                "clientInfo": {"name": f"fastapi-client-{self.service_name}", "version": "1.0.0"}
+            }
+        }
+        headers = {"Content-Type": "application/json", "Accept": "application/json, text/event-stream"}
+        try:
+            response = await self.client.post(self.base_url, json=payload, headers=headers)
+            response.raise_for_status()
+            self.session_id = response.headers.get("mcp-session-id")
+            if self.session_id:
+                print(f"MCP session initialized for {self.service_name} with session ID: {self.session_id}")
+                return True
+            print(f"Error: MCP session ID not found in response for {self.service_name}")
+            return False
+        except httpx.HTTPStatusError as e:
+            print(f"HTTP error initializing MCP session for {self.service_name}: {e.response.status_code} - {e.response.text}")
+        except Exception as e:
+            print(f"Error initializing MCP session for {self.service_name}: {e}")
+        return False
+
+    async def call_method(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        if not self.session_id and not await self.initialize_session():
+            return {"error": f"Failed to initialize session for {self.service_name}"}
+        
+        payload = {"jsonrpc": "2.0", "id": str(uuid.uuid4()), "method": method, "params": params or {}}
+        headers = {
+            "Content-Type": "application/json", "Accept": "application/json, text/event-stream",
+            "Mcp-Session-Id": self.session_id
+        }
+        try:
+            response = await self.client.post(self.base_url, json=payload, headers=headers)
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as e:
+            error_message = f"HTTP error calling method {method} on {self.service_name}: {e.response.status_code}"
+            try:
+                error_details = e.response.json()
+                error_message += f" - {error_details.get('error', {}).get('message', e.response.text)}"
+            except json.JSONDecodeError:
+                error_message += f" - {e.response.text}"
+            print(error_message)
+            return {"error": error_message}
+        except Exception as e:
+            print(f"Error calling method {method} on {self.service_name}: {e}")
+            return {"error": f"Failed to call method {method} on {self.service_name}"}
+
+    async def list_tools(self) -> Dict[str, Any]:
+        return await self.call_method("tools/list")
+
+    async def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+        return await self.call_method("tools/call", {"name": tool_name, "arguments": arguments})
+
+# ==================== MOCKED MCP CLIENTS ====================
+
+class MockedMCPClient(MCPClient):
+    """Mocked MCP client for local development and testing."""
+    def __init__(self, base_url: str, service_name: str):
+        super().__init__(base_url, service_name)
+        self.mock_data = {
+            "tools/list": {"result": {"tools": [{"name": "mock_search"}, {"name": "mock_analyze"}]}},
+            "tools/call": {"result": {"content": "This is a mocked tool response."}}
+        }
+
+    async def initialize_session(self) -> bool:
+        self.session_id = f"mock-session-{uuid.uuid4()}"
+        print(f"Mocked MCP session initialized for {self.service_name} with session ID: {self.session_id}")
+        return True
+
+    async def call_method(self, method: str, params: Dict[str, Any] = None) -> Dict[str, Any]:
+        print(f"Mocked call to {self.service_name}: method={method}, params={params}")
+        await asyncio.sleep(0.1)  # Simulate network latency
+        if method in self.mock_data:
+            return self.mock_data[method]
+        return {"error": f"Mocked method '{method}' not found."}
+
+# ==================== SERVICE CLIENTS ====================
+
+# Configure clients for DeepWiki and Context7
+USE_MOCKS = True # Set to False to use live services
+
+if USE_MOCKS:
+    deepwiki_client = MockedMCPClient("http://localhost:8000/mock/deepwiki", "DeepWiki")
+    context7_client = MockedMCPClient("http://localhost:8000/mock/context7", "Context7")
+else:
+    deepwiki_client = MCPClient("https://mcp.deepwiki.com/mcp", "DeepWiki")
+    context7_client = MCPClient("https://mcp.context7.com/mcp", "Context7")
+
+# ==================== MOCK SERVER ENDPOINTS (for USE_MOCKS=True) ====================
+
+@app.post("/mock/{service_name}")
+async def mock_mcp_endpoint(service_name: str, request: Request):
+    body = await request.json()
+    method = body.get("method")
+    print(f"Received request for mocked service: {service_name}, method: {method}")
+    
+    if service_name == "deepwiki":
+        if method == "tools/list":
+            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"tools": [{"name": "search"}, {"name": "analyze"}]}}
+        if method == "tools/call":
+            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"content": f"Mocked DeepWiki analysis for {body.get('params', {}).get('arguments', {}).get('repository', 'N/A')}"}}
+    
+    if service_name == "context7":
+        if method == "tools/list":
+            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"tools": [{"name": "get_library_docs"}]}}
+        if method == "tools/call":
+            return {"jsonrpc": "2.0", "id": body.get("id"), "result": {"content": f"Mocked Context7 docs for {body.get('params', {}).get('arguments', {}).get('library', 'N/A')}"}}
+            
+    return {"jsonrpc": "2.0", "id": body.get("id"), "error": {"code": -32601, "message": "Method not found"}}
 
 # ==================== ENDPOINTS ====================
 
