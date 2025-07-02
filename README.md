@@ -1,4 +1,4 @@
-# MCP Server to Provide Context for LLMs
+# MCP Servers to Provide Context for LLMs
 
 ```json
 {
