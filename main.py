@@ -12,18 +12,18 @@ import uvicorn
 app = FastAPI(
     title="FastAPI SSE Server", 
     version="1.0.0",
-    description="Server-Sent Events com FastAPI"
+    description="Server-Sent Events with FastAPI"
 )
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especificar domínios
+    allow_origins=["*"],  # In production, specify domains
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ==================== TEMPLATE HTML COMPLETO ====================
+# ==================== COMPLETE HTML TEMPLATE ====================
 
 HTML_TEMPLATE = """
 <!DOCTYPE html>
@@ -137,7 +137,7 @@ HTML_TEMPLATE = """
     <div class="container">
         <div class="header">
             <h1>🚀 FastAPI Server-Sent Events</h1>
-            <p>Demonstração completa de SSE em tempo real</p>
+            <p>Complete real-time SSE demonstration</p>
         </div>
         
         <div class="stats">
@@ -158,39 +158,39 @@ HTML_TEMPLATE = """
         <div class="controls">
             <div class="control-group">
                 <h4>📡 Main Stream</h4>
-                <div class="status disconnected" id="streamStatus">Desconectado</div>
-                <button class="btn-connect" onclick="connectStream()">Conectar</button>
-                <button class="btn-disconnect" onclick="disconnectStream()">Desconectar</button>
+                <div class="status disconnected" id="streamStatus">Disconnected</div>
+                <button class="btn-connect" onclick="connectStream()">Connect</button>
+                <button class="btn-disconnect" onclick="disconnectStream()">Disconnect</button>
             </div>
             
             <div class="control-group">
                 <h4>📊 Metrics Stream</h4>
-                <div class="status disconnected" id="metricsStatus">Desconectado</div>
-                <button class="btn-connect" onclick="connectMetrics()">Conectar</button>
-                <button class="btn-disconnect" onclick="disconnectMetrics()">Desconectar</button>
+                <div class="status disconnected" id="metricsStatus">Disconnected</div>
+                <button class="btn-connect" onclick="connectMetrics()">Connect</button>
+                <button class="btn-disconnect" onclick="disconnectMetrics()">Disconnect</button>
             </div>
             
             <div class="control-group">
-                <h4>🎛️ Controles</h4>
-                <button class="btn-connect" onclick="connectAll()">Conectar Todos</button>
-                <button class="btn-disconnect" onclick="disconnectAll()">Desconectar Todos</button>
-                <button class="btn-clear" onclick="clearEvents()">Limpar</button>
+                <h4>🎛️ Controls</h4>
+                <button class="btn-connect" onclick="connectAll()">Connect All</button>
+                <button class="btn-disconnect" onclick="disconnectAll()">Disconnect All</button>
+                <button class="btn-clear" onclick="clearEvents()">Clear</button>
             </div>
         </div>
         
         <div class="events-container" id="eventsContainer">
             <div class="event">
                 <div class="event-header">
-                    <span>🚀 SISTEMA</span>
+                    <span>🚀 SYSTEM</span>
                     <span id="initialTime"></span>
                 </div>
-                <div>Cliente SSE iniciado. Conecte-se aos streams para ver eventos em tempo real.</div>
+                <div>SSE client initiated. Connect to streams to see real-time events.</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Inicializar timestamp
+        // Initialize timestamp
         document.getElementById('initialTime').textContent = new Date().toLocaleTimeString();
         
         let connections = { stream: null, metrics: null };
@@ -250,7 +250,7 @@ HTML_TEMPLATE = """
         function updateStatus(source, status) {
             const statusElement = document.getElementById(`${source}Status`);
             statusElement.className = `status ${status}`;
-            statusElement.textContent = status === 'connected' ? '🟢 Conectado' : '🔴 Desconectado';
+            statusElement.textContent = status === 'connected' ? '🟢 Connected' : '🔴 Disconnected';
         }
         
         function connect(source, endpoint) {
@@ -277,7 +277,7 @@ HTML_TEMPLATE = """
             }
         }
         
-        // Funções específicas
+        // Specific functions
         function connectStream() { connect('stream', '/stream'); }
         function connectMetrics() { connect('metrics', '/metrics'); }
         function disconnectStream() { disconnect('stream'); }
@@ -285,7 +285,7 @@ HTML_TEMPLATE = """
         function connectAll() { connectStream(); connectMetrics(); }
         function disconnectAll() { disconnectStream(); disconnectMetrics(); }
         function clearEvents() { 
-            eventsContainer.innerHTML = '<div class="event"><div class="event-header"><span>🧹 SISTEMA</span><span>' + new Date().toLocaleTimeString() + '</span></div><div>Eventos limpos.</div></div>'; 
+            eventsContainer.innerHTML = '<div class="event"><div class="event-header"><span>🧹 SYSTEM</span><span>' + new Date().toLocaleTimeString() + '</span></div><div>Events cleared.</div></div>'; 
             eventCounts = { total: 0, stream: 0, metrics: 0 };
             updateStats();
         }
@@ -302,20 +302,20 @@ HTML_TEMPLATE = """
 
 @app.get("/", response_class=HTMLResponse)
 async def get_home():
-    """Página principal com cliente SSE integrado"""
+    """Main page with integrated SSE client"""
     return HTMLResponse(content=HTML_TEMPLATE)
 
 @app.get("/stream")
 async def stream_events(request: Request):
     """
-    Endpoint principal para Server-Sent Events
-    Gera eventos diversos: mensagens, heartbeat, notificações, sensores
+    Main endpoint for Server-Sent Events
+    Generates various events: messages, heartbeat, notifications, sensors
     """
     
     async def event_generator() -> AsyncGenerator[str, None]:
-        # Evento de conexão inicial
+        # Initial connection event
         initial_data = {
-            'message': 'Conectado ao FastAPI SSE Server',
+            'message': 'Connected to FastAPI SSE Server',
             'timestamp': datetime.datetime.now().isoformat(),
             'server_info': {
                 'framework': 'FastAPI',
@@ -327,24 +327,24 @@ async def stream_events(request: Request):
         
         counter = 0
         while True:
-            # Verificar se cliente ainda está conectado
+            # Check if the client is still connected
             if await request.is_disconnected():
                 break
                 
             counter += 1
             
             try:
-                # Evento de dados regulares (a cada 3 loops)
+                # Regular data event (every 3 loops)
                 if counter % 3 == 0:
                     data = {
-                        'message': f'Atualização regular #{counter}',
+                        'message': f'Regular update #{counter}',
                         'timestamp': datetime.datetime.now().isoformat(),
                         'random_value': random.randint(1, 100),
                         'status': 'active'
                     }
                     yield f"data: {json.dumps(data)}\n\n"
                 
-                # Evento de heartbeat (a cada 5 loops)
+                # Heartbeat event (every 5 loops)
                 elif counter % 5 == 0:
                     heartbeat_data = {
                         'server_time': datetime.datetime.now().isoformat(),
@@ -354,19 +354,19 @@ async def stream_events(request: Request):
                     }
                     yield f"event: heartbeat\ndata: {json.dumps(heartbeat_data)}\n\n"
                 
-                # Evento de notificação (a cada 8 loops)
+                # Notification event (every 8 loops)
                 elif counter % 8 == 0:
                     notifications = [
-                        {'title': 'System Update', 'message': 'Nova versão disponível', 'level': 'info'},
-                        {'title': 'Warning', 'message': 'Alto uso de memória detectado', 'level': 'warning'},
-                        {'title': 'Success', 'message': 'Backup concluído com sucesso', 'level': 'success'},
-                        {'title': 'Alert', 'message': 'Limite de conexões atingido', 'level': 'error'}
+                        {'title': 'System Update', 'message': 'New version available', 'level': 'info'},
+                        {'title': 'Warning', 'message': 'High memory usage detected', 'level': 'warning'},
+                        {'title': 'Success', 'message': 'Backup completed successfully', 'level': 'success'},
+                        {'title': 'Alert', 'message': 'Connection limit reached', 'level': 'error'}
                     ]
                     notification = random.choice(notifications)
                     notification['timestamp'] = datetime.datetime.now().isoformat()
                     yield f"event: notification\ndata: {json.dumps(notification)}\n\n"
                 
-                # Dados de sensores simulados (a cada 4 loops)
+                # Simulated sensor data (every 4 loops)
                 elif counter % 4 == 0:
                     sensor_data = {
                         'sensor_data': {
@@ -380,7 +380,7 @@ async def stream_events(request: Request):
                     }
                     yield f"event: sensor\ndata: {json.dumps(sensor_data)}\n\n"
                 
-                await asyncio.sleep(2)  # Intervalo entre eventos
+                await asyncio.sleep(2)  # Interval between events
                 
             except asyncio.CancelledError:
                 break
@@ -400,20 +400,20 @@ async def stream_events(request: Request):
             "Connection": "keep-alive",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Headers": "Cache-Control",
-            "X-Accel-Buffering": "no"  # Desabilitar buffering do nginx
+            "X-Accel-Buffering": "no"  # Disable nginx buffering
         }
     )
 
 @app.get("/metrics")
 async def stream_metrics(request: Request):
     """
-    Stream de métricas em tempo real
-    Envia dados de performance do sistema a cada segundo
+    Real-time metrics stream
+    Sends system performance data every second
     """
     
     async def metrics_generator() -> AsyncGenerator[str, None]:
-        # Evento inicial
-        yield f"data: {json.dumps({'message': 'Conectado ao stream de métricas'})}\n\n"
+        # Initial event
+        yield f"data: {json.dumps({'message': 'Connected to the metrics stream'})}\n\n"
         
         while True:
             if await request.is_disconnected():
@@ -434,7 +434,7 @@ async def stream_metrics(request: Request):
             }
             
             yield f"data: {json.dumps(metrics)}\n\n"
-            await asyncio.sleep(1)  # Métricas a cada segundo
+            await asyncio.sleep(1)  # Metrics every second
     
     return StreamingResponse(
         metrics_generator(),
@@ -449,12 +449,12 @@ async def stream_metrics(request: Request):
 @app.get("/realtime/{channel}")
 async def stream_channel(channel: str, request: Request):
     """
-    Stream de canal específico
-    Permite múltiplos canais de dados independentes
+    Specific channel stream
+    Allows multiple independent data channels
     """
     
     async def channel_generator() -> AsyncGenerator[str, None]:
-        yield f"data: {json.dumps({'message': f'Conectado ao canal: {channel}'})}\n\n"
+        yield f"data: {json.dumps({'message': f'Connected to channel: {channel}'})}\n\n"
         
         while True:
             if await request.is_disconnected():
@@ -485,8 +485,8 @@ async def stream_channel(channel: str, request: Request):
 @app.post("/api/broadcast")
 async def broadcast_message(message: dict):
     """
-    API para enviar mensagem broadcast
-    Em produção, usar Redis/RabbitMQ para pub/sub
+    API to send a broadcast message
+    In production, use Redis/RabbitMQ for pub/sub
     """
     broadcast_data = {
         'type': 'broadcast',
@@ -512,7 +512,7 @@ async def health_check():
     }
 
 if __name__ == "__main__":
-    print("🚀 FastAPI SSE Server iniciando...")
+    print("🚀 FastAPI SSE Server starting...")
     print("📱 Interface: http://127.0.0.1:8000")
     print("📡 Stream: http://127.0.0.1:8000/stream")
     print("📊 Metrics: http://127.0.0.1:8000/metrics")
@@ -525,4 +525,4 @@ if __name__ == "__main__":
         port=8000,
         reload=True,
         log_level="info"
-    ) 
+    )

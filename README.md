@@ -1,119 +1,119 @@
 # 🚀 FastAPI Server-Sent Events (SSE) Tutorial
 
-Este projeto demonstra uma implementação completa de **Server-Sent Events** usando FastAPI, incluindo servidor, cliente Python e interface web.
+This project demonstrates a complete implementation of **Server-Sent Events** using FastAPI, including a server, Python client, and web interface.
 
-## 📋 Funcionalidades
+## 📋 Features
 
-- ✅ **Servidor FastAPI** com múltiplos endpoints SSE
-- ✅ **Interface Web** moderna e interativa
-- ✅ **Cliente Python** para consumo de streams
-- ✅ **Múltiplos tipos de eventos**: heartbeat, notificações, métricas, sensores
-- ✅ **Suporte a canais personalizados**
-- ✅ **API de Broadcast**
-- ✅ **Testes automatizados**
+- ✅ **FastAPI Server** with multiple SSE endpoints
+- ✅ **Modern and interactive Web Interface**
+- ✅ **Python Client** for consuming streams
+- ✅ **Multiple event types**: heartbeat, notifications, metrics, sensors
+- ✅ **Support for custom channels**
+- ✅ **Broadcast API**
+- ✅ **Automated tests**
 
-## ⚙️ Configuração do Ambiente
+## ⚙️ Environment Setup
 
-### 1. Instalar Dependências
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Executar o Servidor
+### 2. Run the Server
 
 ```bash
 python main.py
 ```
 
-O servidor iniciará em `http://127.0.0.1:8000` com os seguintes endpoints:
+The server will start at `http://127.0.0.1:8000` with the following endpoints:
 
-- 🏠 **Interface Web**: `http://127.0.0.1:8000/`
-- 📡 **Stream Principal**: `http://127.0.0.1:8000/stream`
-- 📊 **Métricas**: `http://127.0.0.1:8000/metrics`
-- 🔗 **Canal Personalizado**: `http://127.0.0.1:8000/realtime/{nome-do-canal}`
+- 🏠 **Web Interface**: `http://127.0.0.1:8000/`
+- 📡 **Main Stream**: `http://127.0.0.1:8000/stream`
+- 📊 **Metrics**: `http://127.0.0.1:8000/metrics`
+- 🔗 **Custom Channel**: `http://127.0.0.1:8000/realtime/{channel-name}`
 - ❤️ **Health Check**: `http://127.0.0.1:8000/health`
 
-## 🌐 Interface Web
+## 🌐 Web Interface
 
-Acesse `http://127.0.0.1:8000` para ver a interface web completa com:
+Access `http://127.0.0.1:8000` to see the full web interface with:
 
-- **Conexão simultânea** a múltiplos streams
-- **Estatísticas em tempo real**
-- **Interface moderna** e responsiva
-- **Controles interativos** para conectar/desconectar streams
+- **Simultaneous connection** to multiple streams
+- **Real-time statistics**
+- **Modern and responsive interface**
+- **Interactive controls** to connect/disconnect streams
 
-## 🐍 Cliente Python
+## 🐍 Python Client
 
-Execute o cliente Python para testar os endpoints:
+Run the Python client to test the endpoints:
 
 ```bash
 python client.py
 ```
 
-O cliente oferece um menu interativo para:
-1. Conectar ao stream principal
-2. Conectar às métricas
-3. Conectar a canal personalizado
-4. Testar API de broadcast
+The client offers an interactive menu to:
+1. Connect to the main stream
+2. Connect to metrics
+3. Connect to a custom channel
+4. Test the broadcast API
 
-## 🧪 Executar Testes
+## 🧪 Run Tests
 
-### Testes Automáticos
+### Automated Tests
 ```bash
 python test_sse.py --auto
 ```
 
-### Testes Interativos
+### Interactive Tests
 ```bash
 python test_sse.py
 ```
 
-Os testes verificam:
-- ✅ Health check do servidor
-- ✅ Stream principal de eventos
-- ✅ Stream de métricas
-- ✅ Canais personalizados
-- ✅ API de broadcast
+The tests verify:
+- ✅ Server health check
+- ✅ Main event stream
+- ✅ Metrics stream
+- ✅ Custom channels
+- ✅ Broadcast API
 
-## 📊 Endpoints Disponíveis
+## 📊 Available Endpoints
 
 ### 🏠 GET `/`
-Interface web principal com cliente SSE integrado
+Main web interface with an integrated SSE client.
 
 ### 📡 GET `/stream`
-Stream principal de eventos com:
-- Mensagens regulares
-- Eventos de heartbeat
-- Notificações do sistema
-- Dados de sensores simulados
+Main event stream with:
+- Regular messages
+- Heartbeat events
+- System notifications
+- Simulated sensor data
 
 ### 📊 GET `/metrics`
-Stream de métricas em tempo real:
-- CPU e memória
-- Requisições por segundo
-- Taxa de erro
-- I/O de rede
+Real-time metrics stream:
+- CPU and memory
+- Requests per second
+- Error rate
+- Network I/O
 
 ### 🔗 GET `/realtime/{channel}`
-Canal personalizado para streams específicos
+Custom channel for specific streams.
 
 ### 💬 POST `/api/broadcast`
-API para enviar mensagens broadcast:
+API to send broadcast messages:
 ```json
 {
-  "message": "Sua mensagem aqui",
+  "message": "Your message here",
   "timestamp": "2024-01-01T12:00:00Z"
 }
 ```
 
 ### ❤️ GET `/health`
-Health check do servidor
+Server health check.
 
-## 🛠️ Consumindo via Ferramentas
+## 🛠️ Consuming with Tools
 
 ### 📮 Postman
-1. Criar nova requisição GET
+1. Create a new GET request
 2. URL: `http://127.0.0.1:8000/stream`
 3. Headers:
    ```
@@ -127,113 +127,113 @@ Health check do servidor
 GET http://127.0.0.1:8000/stream
 Accept: text/event-stream
 
-### Métricas
+### Metrics
 GET http://127.0.0.1:8000/metrics
 Accept: text/event-stream
 ```
 
 ### 🔧 cURL
 ```bash
-# Stream principal
+# Main stream
 curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/stream
 
-# Métricas
+# Metrics
 curl -N -H "Accept: text/event-stream" http://127.0.0.1:8000/metrics
 
 # Health check
 curl http://127.0.0.1:8000/health
 ```
 
-## 📝 Estrutura do Projeto
+## 📝 Project Structure
 
 ```
 fastapi-sse-tutorial/
-├── main.py           # Servidor FastAPI principal
-├── client.py         # Cliente Python para consumir SSE
-├── test_sse.py       # Testes automatizados
-├── requirements.txt  # Dependências do projeto
-└── README.md         # Documentação
+├── main.py           # Main FastAPI server
+├── client.py         # Python client to consume SSE
+├── test_sse.py       # Automated tests
+├── requirements.txt  # Project dependencies
+└── README.md         # Documentation
 ```
 
-## 🔧 Dependências
+## 🔧 Dependencies
 
-- **FastAPI**: Framework web moderno
-- **Uvicorn**: Servidor ASGI
-- **Requests**: Cliente HTTP para testes
+- **FastAPI**: Modern web framework
+- **Uvicorn**: ASGI server
+- **Requests**: HTTP client for tests
 
-## 🎯 Casos de Uso
+## 🎯 Use Cases
 
-Este projeto demonstra como implementar:
+This project demonstrates how to implement:
 
-- 📊 **Dashboards em tempo real**
-- 🔔 **Notificações push**
-- 📈 **Monitoramento de sistemas**
-- 🌡️ **Dados de sensores IoT**
-- 💬 **Feeds de atividade**
+- 📊 **Real-time dashboards**
+- 🔔 **Push notifications**
+- 📈 **System monitoring**
+- 🌡️ **IoT sensor data**
+- 💬 **Activity feeds**
 
-## 🔄 Fluxo de Eventos
+## 🔄 Event Flow
 
-1. Cliente se conecta ao endpoint SSE
-2. Servidor envia evento inicial de conexão
-3. Servidor gera eventos periódicos:
-   - **A cada 2s**: Mensagens regulares ou eventos especiais
-   - **A cada 4s**: Dados de sensores
-   - **A cada 5s**: Heartbeat
-   - **A cada 8s**: Notificações
-4. Cliente processa eventos em tempo real
+1. Client connects to the SSE endpoint
+2. Server sends an initial connection event
+3. Server generates periodic events:
+   - **Every 2s**: Regular messages or special events
+   - **Every 4s**: Sensor data
+   - **Every 5s**: Heartbeat
+   - **Every 8s**: Notifications
+4. Client processes events in real-time
 
-## 🎨 Tipos de Eventos
+## 🎨 Event Types
 
-- **`message`**: Eventos padrão com dados gerais
-- **`heartbeat`**: Sinais de vida do servidor
-- **`notification`**: Alertas e notificações
-- **`sensor`**: Dados simulados de sensores
-- **`error`**: Mensagens de erro
+- **`message`**: Standard events with general data
+- **`heartbeat`**: Server life signals
+- **`notification`**: Alerts and notifications
+- **`sensor`**: Simulated sensor data
+- **`error`**: Error messages
 
-## 🚦 Status do Servidor
+## 🚦 Server Status
 
-O servidor indica seu status através de:
-- ✅ **200 OK**: Servidor funcionando
-- 🔄 **Connection keep-alive**: Conexão SSE ativa
-- 📡 **text/event-stream**: Content-Type correto
+The server indicates its status through:
+- ✅ **200 OK**: Server is running
+- 🔄 **Connection keep-alive**: SSE connection is active
+- 📡 **text/event-stream**: Correct Content-Type
 
-## 📱 Compatibilidade
+## 📱 Compatibility
 
-- ✅ **Navegadores modernos** (Chrome, Firefox, Safari, Edge)
-- ✅ **Cliente Python** personalizado
-- ✅ **Ferramentas de API** (Postman, VSCode, cURL)
-- ✅ **Mobile** (através da interface web responsiva)
+- ✅ **Modern browsers** (Chrome, Firefox, Safari, Edge)
+- ✅ **Custom Python client**
+- ✅ **API tools** (Postman, VSCode, cURL)
+- ✅ **Mobile** (through the responsive web interface)
 
 ## 🔧 Troubleshooting
 
-### Problema: Servidor não inicia
+### Problem: Server doesn't start
 ```bash
-# Verificar se a porta 8000 está ocupada
+# Check if port 8000 is busy
 netstat -tulpn | grep :8000
 
-# Tentar porta diferente
+# Try a different port
 uvicorn main:app --host 127.0.0.1 --port 8080
 ```
 
-### Problema: Eventos não chegam
-1. Verificar se o servidor está executando: `curl http://127.0.0.1:8000/health`
-2. Confirmar headers SSE: `Accept: text/event-stream`
-3. Desabilitar cache: `Cache-Control: no-cache`
+### Problem: Events don't arrive
+1. Check if the server is running: `curl http://127.0.0.1:8000/health`
+2. Confirm SSE headers: `Accept: text/event-stream`
+3. Disable cache: `Cache-Control: no-cache`
 
-### Problema: CORS errors
-O servidor já está configurado com CORS permissivo para desenvolvimento. Em produção, configure domínios específicos.
+### Problem: CORS errors
+The server is already configured with permissive CORS for development. In production, configure specific domains.
 
-## 🎓 Próximos Passos
+## 🎓 Next Steps
 
-Para expandir este projeto:
+To expand this project:
 
-1. 🔐 **Adicionar autenticação JWT**
-2. 📊 **Integrar métricas do Prometheus**
-3. 🔄 **Configurar Redis para pub/sub distribuído**
-4. 🐳 **Containerizar com Docker**
-5. ☁️ **Deploy em cloud**
+1. 🔐 **Add JWT authentication**
+2. 📊 **Integrate Prometheus metrics**
+3. 🔄 **Set up Redis for distributed pub/sub**
+4. 🐳 **Containerize with Docker**
+5. ☁️ **Deploy to the cloud**
 
-## 📚 Recursos Úteis
+## 📚 Useful Resources
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
 - [Server-Sent Events MDN](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events)
@@ -242,4 +242,3 @@ Para expandir este projeto:
 ---
 
 **Happy Coding! 🚀**
-

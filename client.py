@@ -8,7 +8,7 @@ import sys
 from typing import Optional
 
 class FastAPISSEClient:
-    """Cliente Python para consumir Server-Sent Events do FastAPI"""
+    """Python client to consume Server-Sent Events from FastAPI"""
     
     def __init__(self, base_url: str = "http://127.0.0.1:8000"):
         self.base_url = base_url.rstrip('/')
@@ -16,16 +16,16 @@ class FastAPISSEClient:
         self.running = False
         
     def connect(self, endpoint: str, callback=None):
-        """Conecta a um endpoint SSE específico"""
+        """Connects to a specific SSE endpoint"""
         url = f"{self.base_url}{endpoint}"
         self.running = True
         
         try:
-            print(f"🔗 Conectando a {url}")
+            print(f"🔗 Connecting to {url}")
             response = requests.get(url, stream=True, timeout=30)
             response.raise_for_status()
             
-            print(f"✅ Conectado a {endpoint}")
+            print(f"✅ Connected to {endpoint}")
             
             for line in response.iter_lines(decode_unicode=True):
                 if not self.running:
@@ -39,7 +39,7 @@ class FastAPISSEClient:
                             event = {'event': 'message', 'data': event_data}
                         elif line.startswith('event: '):
                             event_type = line[7:]  # Remove 'event: '
-                            continue  # Aguardar próxima linha com data
+                            continue  # Wait for the next line with data
                         else:
                             continue
                             
@@ -49,21 +49,21 @@ class FastAPISSEClient:
                             self._default_handler(event, endpoint)
                             
                     except KeyboardInterrupt:
-                        print("\n⚠️  Interrompido pelo usuário")
+                        print("\n⚠️  Interrupted by user")
                         break
                     except Exception as e:
-                        print(f"❌ Erro processando evento: {e}")
+                        print(f"❌ Error processing event: {e}")
                         
         except requests.exceptions.RequestException as e:
-            print(f"❌ Erro de conexão: {e}")
+            print(f"❌ Connection error: {e}")
         except Exception as e:
-            print(f"❌ Erro inesperado: {e}")
+            print(f"❌ Unexpected error: {e}")
         finally:
             self.running = False
-            print(f"🔌 Desconectado de {endpoint}")
+            print(f"🔌 Disconnected from {endpoint}")
     
     def _default_handler(self, event, endpoint):
-        """Handler padrão para eventos SSE"""
+        """Default handler for SSE events"""
         timestamp = time.strftime("%H:%M:%S")
         
         try:
@@ -95,18 +95,18 @@ class FastAPISSEClient:
                 print(f"[{timestamp}] 📊 Metrics - RPS: {rps}, CPU: {cpu_percent}%, Mem: {memory_mb}MB")
                 
             else:
-                message = data.get('message', 'Dados recebidos')
+                message = data.get('message', 'Data received')
                 print(f"[{timestamp}] 📝 {endpoint} - {message}")
                 
         except json.JSONDecodeError:
             print(f"[{timestamp}] 📄 {endpoint} - Raw: {event['data']}")
     
     def stop(self):
-        """Para todas as conexões"""
+        """Stops all connections"""
         self.running = False
 
 def test_health():
-    """Testa o endpoint de health"""
+    """Tests the health endpoint"""
     try:
         response = requests.get("http://127.0.0.1:8000/health", timeout=5)
         response.raise_for_status()
@@ -114,78 +114,78 @@ def test_health():
         print(f"✅ Health check OK: {data['status']}")
         return True
     except Exception as e:
-        print(f"❌ Health check falhou: {e}")
+        print(f"❌ Health check failed: {e}")
         return False
 
 def main():
-    """Demonstração do cliente"""
+    """Client demonstration"""
     print("🚀 FastAPI SSE Client")
     print("=" * 40)
     
-    # Testar conexão primeiro
+    # Test connection first
     if not test_health():
-        print("⚠️  Servidor não está respondendo. Certifique-se de que está rodando:")
+        print("⚠️  Server is not responding. Make sure it's running:")
         print("   python main.py")
         return
     
-    print("1. Stream Principal (/stream)")
-    print("2. Métricas (/metrics)")
-    print("3. Canal Personalizado (/realtime/demo)")
-    print("4. Teste de Broadcast")
-    print("5. Sair")
+    print("1. Main Stream (/stream)")
+    print("2. Metrics (/metrics)")
+    print("3. Custom Channel (/realtime/demo)")
+    print("4. Broadcast Test")
+    print("5. Exit")
     print("=" * 40)
     
     client = FastAPISSEClient()
     
     while True:
         try:
-            choice = input("\nEscolha uma opção (1-5): ").strip()
+            choice = input("\nChoose an option (1-5): ").strip()
             
             if choice == '1':
-                print("Conectando ao stream principal...")
+                print("Connecting to the main stream...")
                 client.connect('/stream')
             elif choice == '2':
-                print("Conectando às métricas...")
+                print("Connecting to metrics...")
                 client.connect('/metrics')
             elif choice == '3':
-                print("Conectando ao canal demo...")
+                print("Connecting to the demo channel...")
                 client.connect('/realtime/demo')
             elif choice == '4':
-                print("Enviando broadcast...")
+                print("Sending broadcast...")
                 test_broadcast()
             elif choice == '5':
-                print("👋 Encerrando...")
+                print("👋 Exiting...")
                 break
             else:
-                print("❌ Opção inválida")
+                print("❌ Invalid option")
                 
         except KeyboardInterrupt:
-            print("\n🛑 Interrompido pelo usuário")
+            print("\n🛑 Interrupted by user")
             client.stop()
             break
         except EOFError:
-            print("\n👋 Encerrando...")
+            print("\n👋 Exiting...")
             break
 
 def test_broadcast():
-    """Testa o endpoint de broadcast"""
+    """Tests the broadcast endpoint"""
     try:
         data = {
-            "message": "Teste de broadcast do cliente Python",
+            "message": "Broadcast test from Python client",
             "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
         }
         response = requests.post("http://127.0.0.1:8000/api/broadcast", json=data, timeout=5)
         response.raise_for_status()
         result = response.json()
-        print(f"✅ Broadcast enviado: {result['status']}")
+        print(f"✅ Broadcast sent: {result['status']}")
     except Exception as e:
-        print(f"❌ Erro no broadcast: {e}")
+        print(f"❌ Error in broadcast: {e}")
 
 if __name__ == "__main__":
-    # Handler para sinais do sistema
+    # Handler for system signals
     def signal_handler(sig, frame):
-        print('\n🛑 Sinal recebido, encerrando...')
+        print('\n🛑 Signal received, exiting...')
         sys.exit(0)
     
     signal.signal(signal.SIGINT, signal_handler)
-    main() 
+    main()

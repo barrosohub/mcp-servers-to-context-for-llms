@@ -6,22 +6,22 @@ import time
 from datetime import datetime
 
 def test_health_endpoint():
-    """Testa o endpoint de health check"""
-    print("🧪 Testando endpoint de health...")
+    """Tests the health check endpoint"""
+    print("🧪 Testing health endpoint...")
     try:
         response = requests.get("http://127.0.0.1:8000/health", timeout=5)
         response.raise_for_status()
         data = response.json()
         print(f"✅ Health check: {data['status']}")
-        print(f"📊 Servidor: {data['server']} v{data['version']}")
+        print(f"📊 Server: {data['server']} v{data['version']}")
         return True
     except Exception as e:
-        print(f"❌ Health check falhou: {e}")
+        print(f"❌ Health check failed: {e}")
         return False
 
 def test_sync_sse_endpoint(url: str, duration: int = 10):
-    """Testa um endpoint SSE de forma síncrona"""
-    print(f"🧪 Testando {url} por {duration} segundos...")
+    """Tests an SSE endpoint synchronously"""
+    print(f"🧪 Testing {url} for {duration} seconds...")
     
     try:
         response = requests.get(
@@ -51,24 +51,24 @@ def test_sync_sse_endpoint(url: str, duration: int = 10):
                     data = json.loads(line[6:])  # Remove 'data: '
                     timestamp = datetime.now().strftime("%H:%M:%S")
                     message = data.get('message', 'N/A')
-                    print(f"[{timestamp}] 📡 Evento #{event_count}: {message}")
+                    print(f"[{timestamp}] 📡 Event #{event_count}: {message}")
                 except json.JSONDecodeError:
                     print(f"📄 Raw data: {line}")
         
-        print(f"🏁 Teste concluído. Total de eventos: {event_count}")
+        print(f"🏁 Test finished. Total events: {event_count}")
         return event_count > 0
         
     except Exception as e:
-        print(f"❌ Erro: {e}")
+        print(f"❌ Error: {e}")
         return False
 
 def test_broadcast_api():
-    """Testa o endpoint de broadcast"""
-    print("🧪 Testando API de broadcast...")
+    """Tests the broadcast endpoint"""
+    print("🧪 Testing broadcast API...")
     
     try:
         data = {
-            "message": "Teste de broadcast do script de teste",
+            "message": "Broadcast test from the test script",
             "timestamp": datetime.now().isoformat(),
             "sender": "test_script"
         }
@@ -79,71 +79,71 @@ def test_broadcast_api():
         )
         response.raise_for_status()
         result = response.json()
-        print(f"✅ Broadcast enviado: {result['status']}")
+        print(f"✅ Broadcast sent: {result['status']}")
         return True
     except Exception as e:
-        print(f"❌ Erro no broadcast: {e}")
+        print(f"❌ Error in broadcast: {e}")
         return False
 
 def test_all_endpoints():
-    """Executa todos os testes em sequência"""
-    print("🚀 Iniciando suite de testes FastAPI SSE")
+    """Runs all tests in sequence"""
+    print("🚀 Starting FastAPI SSE test suite")
     print("=" * 50)
     
-    # Teste de health check
+    # Health check test
     if not test_health_endpoint():
-        print("⚠️  Servidor não está respondendo. Executar: python main.py")
+        print("⚠️  Server is not responding. Run: python main.py")
         return False
     
     print("\n" + "-" * 50)
     
-    # Teste do stream principal
+    # Main stream test
     stream_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/stream", 5)
     
     print("\n" + "-" * 50)
     
-    # Teste do stream de métricas
+    # Metrics stream test
     metrics_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/metrics", 5)
     
     print("\n" + "-" * 50)
     
-    # Teste do canal personalizado
+    # Custom channel test
     channel_ok = test_sync_sse_endpoint("http://127.0.0.1:8000/realtime/test", 5)
     
     print("\n" + "-" * 50)
     
-    # Teste da API de broadcast
+    # Broadcast API test
     broadcast_ok = test_broadcast_api()
     
     print("\n" + "=" * 50)
-    print("📊 RESUMO DOS TESTES:")
+    print("📊 TEST SUMMARY:")
     print(f"   Health Check: {'✅' if True else '❌'}")
-    print(f"   Stream Principal: {'✅' if stream_ok else '❌'}")
-    print(f"   Métricas: {'✅' if metrics_ok else '❌'}")
-    print(f"   Canal Personalizado: {'✅' if channel_ok else '❌'}")
+    print(f"   Main Stream: {'✅' if stream_ok else '❌'}")
+    print(f"   Metrics: {'✅' if metrics_ok else '❌'}")
+    print(f"   Custom Channel: {'✅' if channel_ok else '❌'}")
     print(f"   Broadcast API: {'✅' if broadcast_ok else '❌'}")
     
     all_ok = stream_ok and metrics_ok and channel_ok and broadcast_ok
-    print(f"\n🎯 Status Geral: {'✅ TODOS OS TESTES PASSARAM' if all_ok else '❌ ALGUNS TESTES FALHARAM'}")
+    print(f"\n🎯 Overall Status: {'✅ ALL TESTS PASSED' if all_ok else '❌ SOME TESTS FAILED'}")
     
     return all_ok
 
 def interactive_test():
-    """Teste interativo para escolher endpoints específicos"""
-    print("🚀 FastAPI SSE - Teste Interativo")
+    """Interactive test to choose specific endpoints"""
+    print("🚀 FastAPI SSE - Interactive Test")
     print("=" * 40)
     print("1. Health Check")
-    print("2. Stream Principal (/stream)")
-    print("3. Métricas (/metrics)")
-    print("4. Canal Personalizado (/realtime/test)")
-    print("5. API Broadcast")
-    print("6. Executar Todos os Testes")
-    print("7. Sair")
+    print("2. Main Stream (/stream)")
+    print("3. Metrics (/metrics)")
+    print("4. Custom Channel (/realtime/test)")
+    print("5. Broadcast API")
+    print("6. Run All Tests")
+    print("7. Exit")
     print("=" * 40)
     
     while True:
         try:
-            choice = input("\nEscolha uma opção (1-7): ").strip()
+            choice = input("\nChoose an option (1-7): ").strip()
             
             if choice == '1':
                 test_health_endpoint()
@@ -158,24 +158,24 @@ def interactive_test():
             elif choice == '6':
                 test_all_endpoints()
             elif choice == '7':
-                print("👋 Encerrando testes...")
+                print("👋 Exiting tests...")
                 break
             else:
-                print("❌ Opção inválida")
+                print("❌ Invalid option")
                 
         except KeyboardInterrupt:
-            print("\n🛑 Testes interrompidos pelo usuário")
+            print("\n🛑 Tests interrupted by user")
             break
         except EOFError:
-            print("\n👋 Encerrando testes...")
+            print("\n👋 Exiting tests...")
             break
 
 if __name__ == "__main__":
     import sys
     
     if len(sys.argv) > 1 and sys.argv[1] == "--auto":
-        # Modo automático
+        # Automatic mode
         test_all_endpoints()
     else:
-        # Modo interativo
+        # Interactive mode
         interactive_test()
