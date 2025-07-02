@@ -1,11 +1,11 @@
 # ---- Base Stage ----
 # Use an official, slim Python image as a parent image
 # Using a specific version (e.g., 3.11) is recommended for reproducibility
-FROM python:3.11-slim as base
+FROM python:3.11-slim AS base
 
 # Set environment variables to prevent writing .pyc files and to run in unbuffered mode
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 # Set the working directory in the container
 WORKDIR /app
@@ -13,7 +13,7 @@ WORKDIR /app
 
 # ---- Builder Stage ----
 # This stage is for installing dependencies
-FROM base as builder
+FROM base AS builder
 
 # Install build dependencies if any (e.g., for compiling C extensions)
 # RUN apt-get update && apt-get install -y build-essential
@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- Final Stage ----
 # This is the final, production-ready image
-FROM base as final
+FROM base AS final
 
 # Copy the virtual environment from the builder stage
 COPY --from=builder /opt/venv /opt/venv
